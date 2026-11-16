@@ -1,0 +1,9 @@
+{
+  "name": "quanlybanhang-root",
+  "version": "1.0.0",
+  "scripts": {
+    "fe": "cd frontend/frontend-quanlybanhang && npm run dev",
+    "be": "cd \"demo (7)/demo\" && mvnw.cmd spring-boot:run",
+    "dev": "npx -y concurrently \"npm run be\" \"npm run fe\""
+  }
+}

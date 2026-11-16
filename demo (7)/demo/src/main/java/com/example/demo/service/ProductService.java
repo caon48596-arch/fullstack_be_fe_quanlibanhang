@@ -1,0 +1,58 @@
+package com.example.demo.service;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.demo.Repository.CategoryRepository;
+import com.example.demo.Repository.ProductRepository;
+import com.example.demo.entity.Category;
+import com.example.demo.entity.Product;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class ProductService {
+    private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+
+    // create
+    public Product createProduct(String name, double price, int stock, Long categoryId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("không tìm thấy danh mục"));
+
+        Product product = new Product();
+        product.setName(name);
+        product.setStock(stock);
+        product.setPrice(price);
+        product.setCategory(category);
+        return productRepository.save(product);
+    }
+
+    // xem all prodcut
+    public Page<Product> getAllProducts(int page, int size) {
+        return productRepository.findAll(PageRequest.of(page, size, Sort.by("id").descending()));
+    }
+
+    // cặp nhật sl sản phẩm
+    @Transactional
+    public void reduceStock(long id, int quantity) {
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("không có sẵn phẩm"));
+
+        if (product.getStock() < quantity) {
+            throw new RuntimeException("sản phẩm k đủ");
+        }
+
+        product.setStock(product.getStock() - quantity);
+        productRepository.save(product);
+    }
+
+    // tìm sp giá thấp nhất
+    public Page<Product> searchProducts(String name, double minprice, int size, int page) {
+        return productRepository.searchProduct(name, minprice, PageRequest.of(page, size));
+    }
+}

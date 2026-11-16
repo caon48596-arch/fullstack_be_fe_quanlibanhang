@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>IPWORLD - Trang chủ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="script.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface-container-lowest dark:bg-inverse-surface border-b border-outline-variant dark:border-outline shadow-sm dark:shadow-none docked full-width top-0 sticky z-50">
+<div class="flex justify-between items-center w-full px-gutter max-w-container-max mx-auto h-20">
+<!-- Brand -->
+<a class="font-display-lg text-display-lg font-black text-primary dark:text-primary-fixed tracking-tighter hover:opacity-80 transition-opacity" href="#">
+                IPWORLD
+            </a>
+<!-- Navigation Links -->
+<nav class="hidden md:flex gap-lg">
+<a class="text-primary dark:text-primary-fixed font-bold border-b-2 border-primary pb-1 font-label-md text-label-md" href="#">Trang chủ</a>
+<a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md hover:bg-surface-container-low dark:hover:bg-secondary-container rounded-DEFAULT px-2 py-1" href="#">Bộ sưu tập</a>
+<a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md hover:bg-surface-container-low dark:hover:bg-secondary-container rounded-DEFAULT px-2 py-1" href="#">Khuyến mãi</a>
+<a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md hover:bg-surface-container-low dark:hover:bg-secondary-container rounded-DEFAULT px-2 py-1" href="#">Tin tức</a>
+</nav>
+<!-- Actions (Search on right, Icons) -->
+<div class="flex items-center gap-md">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface rounded-full border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-body-sm text-body-sm w-48 lg:w-64" placeholder="Tìm kiếm..." type="text"/>
+</div>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-secondary-container transition-all p-2 rounded-full scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+</button>
+<button class="text-primary dark:text-primary-fixed-dim hover:bg-surface-container-low dark:hover:bg-secondary-container transition-all p-2 rounded-full scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Layout -->
+<div class="flex-1 w-full max-w-container-max mx-auto px-gutter md:px-xl py-xl flex gap-xl relative">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col gap-base p-md w-64 border-r border-outline-variant bg-surface dark:bg-surface-dim h-[calc(100vh-80px)] sticky top-20 flex-shrink-0">
+<div class="mb-lg px-2">
+<h2 class="font-headline-md text-headline-md text-primary">Danh mục</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Khám phá sản phẩm</p>
+</div>
+<nav class="flex flex-col gap-xs">
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container font-semibold rounded-full font-label-md text-label-md active:opacity-80 hover:translate-x-1 transition-transform group" href="#">
+<span class="material-symbols-outlined" data-icon="smartphone">smartphone</span>
+                    Điện thoại
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface hover:bg-surface-container-high rounded-full font-label-md text-label-md active:opacity-80 hover:translate-x-1 transition-transform group" href="#">
+<span class="material-symbols-outlined" data-icon="laptop">laptop</span>
+                    Máy tính
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface hover:bg-surface-container-high rounded-full font-label-md text-label-md active:opacity-80 hover:translate-x-1 transition-transform group" href="#">
+<span class="material-symbols-outlined" data-icon="headphones">headphones</span>
+                    Phụ kiện
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface hover:bg-surface-container-high rounded-full font-label-md text-label-md active:opacity-80 hover:translate-x-1 transition-transform group" href="#">
+<span class="material-symbols-outlined" data-icon="watch">watch</span>
+                    Đồng hồ
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant dark:text-on-surface hover:bg-surface-container-high rounded-full font-label-md text-label-md active:opacity-80 hover:translate-x-1 transition-transform group" href="#">
+<span class="material-symbols-outlined" data-icon="speaker">speaker</span>
+                    Âm thanh
+                </a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 min-w-0 pb-3xl">
+<div class="mb-xl">
+<h1 class="font-display-lg text-display-lg text-on-surface mb-2">Sản phẩm mới nhất</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Khám phá những công nghệ đột phá vừa ra mắt.</p>
+</div>
+<!-- Bento/Grid Products -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-lg">
+<!-- Product Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A high-end product photography shot of a sleek modern smartphone with a titanium finish, resting on a minimalist white pedestal. Soft studio lighting highlights the metallic edges and premium build quality, set against a pristine, light-mode background with soft shadows for a corporate tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaPL09ETduQlK5IMpWJspOYWWWU0DS5kMLB1oYfb-sd060I21DlkCfP1vsGwSdJegoCBlov17RsiBDAqPTxGWJHnq2BZKIxXVA2XClin2E43yHipqDyzLEwRri80bRKCVV42cS2ZMJtKMjVUDLDa4sZizIzrPk2ilQS_dE8fNuOOlvcKMQrFOFCCYbyWORG4BoJAm7ZeEoM0dTYxM4jcC7l4UNcKq-jGFKZ8zGSXNWeIDsYQncNspu"/>
+<div class="absolute top-2 left-2 bg-error text-on-error px-2 py-1 rounded-DEFAULT font-label-sm text-label-sm">Mới</div>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">iPhone 15 Pro Max</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Titanium tự nhiên, 256GB</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">34.990.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A clean, minimalist product shot of a thin silver laptop slightly open, showcasing a vibrant but subtle screen saver. The laptop sits on a bright, smooth surface reflecting soft ambient light, perfectly fitting a modern, premium e-commerce tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4Smvps--689SmFTOa4dyPI-7L8SeT7vFQA1a4ynh-q1QxKtPni-8dYrk192pMdFVZXF0LLzsxt6AwpsTb9fb-ImeL_2B6agIvRIuqETLGbv6oqHMMraQ4fUuXzDU_EJekdAOA1GyeFkp2nwWEnqtr_b6Le1Qh-WXo-KXvSZnMXVDORETxPzyIavZuLYI9T-ajDnZ3fAe3R3SJKuGt4yaSN49sfrbA3peMPM0DUU75IQxpP1MEWarT"/>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">MacBook Air M3</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Chip M3 mới nhất, siêu mỏng nhẹ, pin 18h.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">27.990.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close up product photography of high-end over-ear wireless headphones in matte black, resting on an acrylic stand. The background is a stark, clean white to emphasize the product's sleek silhouette and premium materials, designed for a modern shopping interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLjhXwDV8XnaJL0GprkiYVLAtZ3HzzmRStjDSw04HhdfbAyqpSQ8sfG34X8U1gHWUzNIEwm9Ys0CCuUncODIjdqlLPUS0LwbCUHX8IIc8FFytFjAd2labyj4viAWO8LK6w-9ZQXlpse0R4VJoyyzfDu6G9xDlk4SgnO05UqcUfffqzTtplZHkk21Dzh7j_4QPfZXnoNol-AFq8KB7E0gRDdTcYzR-Nq8aeXN04klER1m8TtaSId01w"/>
+<div class="absolute top-2 left-2 bg-primary-container text-on-primary-container px-2 py-1 rounded-DEFAULT font-label-sm text-label-sm">Bán chạy</div>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">Sony WH-1000XM5</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Chống ồn chủ động hàng đầu, âm thanh Hi-Res.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">7.490.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 4 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A modern smart watch with a bright, vibrant AMOLED display and a sleek silicone band, photographed against a minimalist bright background with dynamic, soft lighting that highlights the smooth curves of the watch face. Premium commercial tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBGFRIQtq9Y7sOXX42KDUoYA2IpI8UGoRXe7X8Bv_pY8ac4fGoOAyIuaSbN_OY_csCFCXjCPm6EIHaACgiOuFKC-jj2OsOMrYmNiusKc8MvDk5988E9n6UEHOtYWxST4AO1ZVPkyC-68x1_m_6QAme_SjkVzpU6wAt2o1NpDobpSMkh3WdJ8RD7ReYNoEO3jFsIAoan2FYuJZXOCxg6F2Tt3D96ktWpZgQAUjIWUkqRGp_Kj1-Bp_d"/>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">Apple Watch Series 9</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Theo dõi sức khỏe toàn diện, Double Tap tiện lợi.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">10.490.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 5 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A pristine white wireless charging pad holding two premium mobile devices. The scene is lit with bright, diffused studio light against a clean white background, emphasizing high tech, modern design and luxury e-commerce visuals." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkN3O0Sg4bQGijkHhmcnh9ir3CVecVW0pmaDT9Vt6Zl6-7aQfrXhPf6EBd5SG6sCZg8vuvMs42OPvici-TXd1deX1kjhpiM3ugetkAGYKYkUeR2KPU3Xn0khdGuEdfJv4H18APUBfC1Zdc92YYiaLAOCyAkQC1wF8SwFFs7jXEpfeZwYUcbjOXBBL3j2V9UDMNqapAR1ny3ETfABEy3_A-i9ff_mpAWa5aCeVhBkIMUDayalNjvv3V"/>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">Sạc không dây MagSafe</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Sạc nhanh 15W, thiết kế từ tính chắc chắn.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">1.190.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 6 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A sleek, modern portable bluetooth speaker in an olive green color, sitting on a pale, seamless studio background. The lighting is soft but directional, highlighting the mesh texture of the speaker grille. Corporate minimalist style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA19ihiClqeIYCYZ8sGKhwCN4cUeobXce206F40slfwNLS8Mmh8ay8ghfSvJckYCn_cxZSDRAewKbArWXihh8v6ULPUn1jwYB5l3FWW9zRfd40FzETxbfoijjgokrFEp35S0_darLf1_Hgit0oeIClZ4I3AoC7nNlY-j20cCiQQJ1UUYkqTAh_2H76xYg2PvtnLmsyDnLHLRy44a5jQ27YxKmUWbVuC_F4A6I9xTKP35DeIMeN4yDT8"/>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">Loa Bluetooth JBL Flip 6</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Chống nước IP67, âm bass mạnh mẽ, pin 12h.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">2.590.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 7 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A high resolution shot of a premium tablet with a stylus resting elegantly on its screen. The background is completely white, creating a clinical, high-end commercial feel. Soft shadows ground the device perfectly in a light-mode layout." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrlv7ruiHczViS4dJFO056jlj5DHVgiVhZxELuPBl80okVzYSeI8MKmBBcQWaeNS1wE8jjLpiTpb4tYbUWQ2do2yNA2k9YPFdUyE2a5o2CYlTvsLECo77VXSY3RwsSOYwG-Stss2zboqD4DVpZ7knpx74YDhbI0EY9OzHjHuaFOlW22AvUU7N6eg2XKNn_JMCnt0gyeOoj0QMX38E8GtbT2zbuHBDcAV9goxiZW-OQ7-ZvqDuVhl7y"/>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">iPad Pro 11-inch M2</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Hiệu năng vô đối, màn hình Liquid Retina sắc nét.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">21.990.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+<!-- Product Card 8 -->
+<div class="bg-surface-container-lowest rounded-xl p-md flex flex-col gap-md border border-outline-variant hover:shadow-lg transition-shadow duration-300 group cursor-pointer relative overflow-hidden">
+<div class="w-full aspect-square rounded-lg bg-surface-container flex items-center justify-center overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A top-down view of true wireless earbuds emerging from their sleek, pill-shaped charging case. The minimalist composition features a bright, clean white aesthetic with subtle gray shadows, perfectly suited for a modern tech e-commerce site." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW5rIi5ASKHH_C7pYFmt3uw1DgiIzQ8wE_B5PtEbb3rsNCeKstn2SSgWvJ30KTVJHlv6MIdE8o2hQTLxGLMjev2ZmVqtONCdNDsJl30kdaTIvTRsEZxboTTkKp2wyhmqjzkjI8xahFP6ip7D1a7QEjdbbuuWk3DoOwxlkmPf45D-5GMvXCmj-5jyOsLk-ph7FHDi1m5sMU0q2rX0WlfYxtYm43FNF445z387QBIHCWCLE2cYOGBbws"/>
+</div>
+<div class="flex flex-col flex-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface line-clamp-1 mb-1">AirPods Pro Gen 2</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-auto line-clamp-2">Khử tiếng ồn chủ động tốt hơn gấp 2 lần.</p>
+<div class="mt-md flex items-end justify-between">
+<span class="font-headline-md text-headline-md text-primary font-bold">5.890.000 ₫</span>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-2 rounded-full font-label-md text-label-md hover:bg-surface-tint transition-colors mt-2 opacity-0 group-hover:opacity-100 absolute bottom-4 left-0 right-0 mx-4 w-[calc(100%-32px)] translate-y-4 group-hover:translate-y-0 duration-300">
+                        Thêm vào giỏ
+                    </button>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-inverse-surface dark:bg-surface-container-lowest full-width mt-xl w-full py-xl px-gutter flex flex-col items-center gap-md">
+<div class="font-headline-sm text-headline-sm text-inverse-primary text-center mb-sm">
+            IPWORLD
+        </div>
+<nav class="flex flex-wrap justify-center gap-md mb-sm">
+<a class="text-on-tertiary-container hover:text-white font-body-sm text-body-sm hover:underline opacity-100 transition-colors" href="#">Chính sách bảo mật</a>
+<a class="text-on-tertiary-container hover:text-white font-body-sm text-body-sm hover:underline opacity-100 transition-colors" href="#">Điều khoản dịch vụ</a>
+<a class="text-on-tertiary-container hover:text-white font-body-sm text-body-sm hover:underline opacity-100 transition-colors" href="#">Liên hệ</a>
+<a class="text-on-tertiary-container hover:text-white font-body-sm text-body-sm hover:underline opacity-100 transition-colors" href="#">Hệ thống cửa hàng</a>
+</nav>
+<div class="text-on-tertiary-container font-body-sm text-body-sm text-center">
+            © 2026 IPWORLD. Tất cả quyền được bảo lưu.
+        </div>
+</footer>
+</body></html>
