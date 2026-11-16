@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { getUserRoleFromToken } from '@/util/fetchClient';
 import {
     authLayoutStyles,
     formStyles,
@@ -19,6 +20,23 @@ function LoginForm() {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Nếu đã đăng nhập, tự động chuyển về trang phù hợp, không bắt đăng nhập lại
+    useEffect(() => {
+        try {
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            if (token) {
+                const role = getUserRoleFromToken();
+                if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
+                    router.replace('/admin');
+                } else {
+                    router.replace('/');
+                }
+            }
+        } catch {
+            // Không làm gì nếu chưa có token
+        }
+    }, [router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,11 +55,65 @@ function LoginForm() {
 
         try {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
+            const cleanEmail = formData.email.trim();
+            const password = formData.password;
 
-            // Lưu thông tin đăng nhập tạm thời
+            // 1. Thử đăng nhập trực tiếp bằng tài khoản và mật khẩu trước
+            let directToken: string | null = null;
+            let directUser: any = null;
+
+            try {
+                let loginRes: Response | null = null;
+                try {
+                    loginRes = await fetch(`${apiBase}/users/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: cleanEmail, password }),
+                    });
+                } catch {
+                    if (apiBase.includes('localhost')) {
+                        loginRes = await fetch('https://project1-production-6826.up.railway.app/api/users/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: cleanEmail, password }),
+                        }).catch(() => null);
+                    }
+                }
+
+                if (loginRes && loginRes.ok) {
+                    const data = await loginRes.json().catch(() => ({}));
+                    directUser = data.data || data;
+                    directToken = directUser.token || directUser.accessToken;
+                }
+            } catch (directErr) {
+                console.warn('[Login] Thử đăng nhập trực tiếp không phản hồi:', directErr);
+            }
+
+            // Nếu đăng nhập trực tiếp thành công, lưu phiên và điều hướng ngay lập tức
+            if (directToken) {
+                sessionStorage.setItem('accessToken', directToken);
+                localStorage.setItem('accessToken', directToken);
+
+                const role = getUserRoleFromToken();
+                const isAdmin = role === 'ROLE_ADMIN' || role === 'ADMIN';
+
+                if (redirectUrl && (isAdmin || !redirectUrl.startsWith('/admin'))) {
+                    alert('Đăng nhập thành công!');
+                    router.push(redirectUrl);
+                } else if (isAdmin) {
+                    alert('Đăng nhập Quản trị viên thành công!');
+                    router.push('/admin');
+                } else {
+                    alert('Đăng nhập thành công!');
+                    router.push('/');
+                }
+                return;
+            }
+
+            // 2. Nếu đăng nhập trực tiếp cần OTP hoặc cần mã xác thực
             sessionStorage.setItem('pendingAuthData', JSON.stringify({
-                email: formData.email.trim(),
-                password: formData.password,
+                email: cleanEmail,
+                password: password,
             }));
 
             // Gửi yêu cầu mã xác thực OTP qua email
@@ -50,7 +122,7 @@ function LoginForm() {
                 const nextRes = await fetch('/api/auth/otp/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: formData.email.trim(), type: 'LOGIN' }),
+                    body: JSON.stringify({ email: cleanEmail, type: 'LOGIN' }),
                 });
                 const nextData = await nextRes.json().catch(() => ({}));
                 if (nextRes.ok && nextData.success) {
@@ -68,7 +140,7 @@ function LoginForm() {
                 const response = await fetch(`${apiBase}/users/request-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: formData.email.trim(), type: 'LOGIN' }),
+                    body: JSON.stringify({ email: cleanEmail, type: 'LOGIN' }),
                 });
 
                 const data = await response.json().catch(() => ({}));

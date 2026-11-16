@@ -16,14 +16,21 @@ export default function AdminLayout({
 
   useEffect(() => {
     // Kiểm tra quyền Admin từ Token JWT
+    const token = typeof window !== 'undefined'
+      ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
+      : null;
     const role = getUserRoleFromToken();
     if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
       setIsAuthorized(true);
     } else {
       setIsAuthorized(false);
-      // Chuyển hướng sau 1.5 giây nếu không phải Admin
+      // Chuyển hướng sau 1.5 giây: nếu chưa đăng nhập -> /login, nếu đã là người dùng thường -> / (không đá ra login)
       const timer = setTimeout(() => {
-        router.push('/login');
+        if (!token) {
+          router.push('/login?redirect=/admin');
+        } else {
+          router.push('/');
+        }
       }, 1500);
       return () => clearTimeout(timer);
     }

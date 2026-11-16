@@ -34,7 +34,9 @@ export default function CheckoutPage() {
     const [createdInvoice, setCreatedInvoice] = useState<InvoiceData | null>(null);
 
     useEffect(() => {
-        const token = typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null;
+        const token = typeof window !== 'undefined'
+            ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
+            : null;
         setIsLoggedIn(!!token);
     }, []);
 
@@ -60,7 +62,9 @@ export default function CheckoutPage() {
         if (cartItems.length === 0) return;
 
         // Bắt buộc khách hàng phải đăng nhập nếu muốn thanh toán
-        const token = sessionStorage.getItem('accessToken');
+        const token = typeof window !== 'undefined'
+            ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
+            : null;
         if (!token) {
             alert('Quý khách vui lòng đăng nhập để tiến hành thanh toán và tạo hóa đơn!');
             router.push('/login?redirect=/orders');

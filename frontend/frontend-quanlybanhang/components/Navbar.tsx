@@ -44,7 +44,9 @@ export default function Navbar() {
     /* ── Đọc token khi pathname thay đổi ── */
     useEffect(() => {
         try {
-            const token = sessionStorage.getItem('accessToken');
+            const token = typeof window !== 'undefined'
+                ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
+                : null;
             setIsLoggedIn(!!token);
             if (token) {
                 setUserRole(getUserRoleFromToken());
@@ -78,6 +80,7 @@ export default function Navbar() {
     const handleLogout = () => {
         try {
             sessionStorage.removeItem('accessToken');
+            localStorage.removeItem('accessToken');
             setIsLoggedIn(false);
             setUserRole(null);
             setUserName(null);
@@ -97,7 +100,7 @@ export default function Navbar() {
     const handleOpenSettings = async () => {
         setIsSettingsOpen(true);
         try {
-            const token = sessionStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const res = await fetch(`${apiBase}/users/profile`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
@@ -120,7 +123,7 @@ export default function Navbar() {
         e.preventDefault();
         setIsUpdatingSettings(true);
         try {
-            const token = sessionStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
             const res = await fetch(`${apiBase}/users/update`, {
                 method: 'PUT',
                 headers: {

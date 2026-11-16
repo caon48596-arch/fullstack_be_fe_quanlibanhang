@@ -25,7 +25,7 @@ export default function ShopPage() {
     }, []);
 
     const handleAddToCart = (product: Product) => {
-        const token = sessionStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
         if (!token) {
             alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
             return;

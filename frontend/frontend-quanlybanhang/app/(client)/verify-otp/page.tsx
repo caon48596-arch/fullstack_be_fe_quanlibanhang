@@ -194,14 +194,16 @@ function VerifyOtpContent() {
                 if (!token) throw new Error('Không nhận được mã xác thực (Token) từ máy chủ.');
 
                 sessionStorage.setItem('accessToken', token);
+                localStorage.setItem('accessToken', token);
                 sessionStorage.removeItem('pendingAuthData');
                 sessionStorage.removeItem('pendingOtpSession');
 
                 const role = getUserRoleFromToken();
-                if (redirectUrl) {
-                    alert('Đăng nhập thành công! Đang chuyển đến thanh toán...');
+                const isAdmin = role === 'ROLE_ADMIN' || role === 'ADMIN';
+                if (redirectUrl && (isAdmin || !redirectUrl.startsWith('/admin'))) {
+                    alert('Đăng nhập thành công!');
                     router.push(redirectUrl);
-                } else if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
+                } else if (isAdmin) {
                     alert('Đăng nhập Quản trị viên thành công!');
                     router.push('/admin');
                 } else {

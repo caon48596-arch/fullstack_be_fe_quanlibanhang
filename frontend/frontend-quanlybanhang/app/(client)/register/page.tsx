@@ -50,16 +50,48 @@ export default function RegisterPage() {
             }));
 
             // Gửi yêu cầu lấy mã OTP
-            const response = await fetch(`${apiBase}/users/request-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
-            });
+            let otpSent = false;
+            try {
+                const nextRes = await fetch('/api/auth/otp/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
+                });
+                const nextData = await nextRes.json().catch(() => ({}));
+                if (nextRes.ok && nextData.success) {
+                    otpSent = true;
+                    if (nextData.otpSessionToken) {
+                        sessionStorage.setItem('pendingOtpSession', nextData.otpSessionToken);
+                    }
+                }
+            } catch (nextErr) {
+                console.warn('[Register] Đang kết nối dự phòng sang Backend:', nextErr);
+            }
 
-            const data = await response.json().catch(() => ({}));
+            if (!otpSent) {
+                let response: Response | null = null;
+                try {
+                    response = await fetch(`${apiBase}/users/request-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
+                    });
+                } catch {
+                    if (apiBase.includes('localhost')) {
+                        response = await fetch('https://project1-production-6826.up.railway.app/api/users/request-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
+                        }).catch(() => null);
+                    }
+                }
 
-            if (!response.ok && response.status !== 404) {
-                throw new Error(data.message || data.error || 'Email hoặc số điện thoại đã tồn tại trong hệ thống!');
+                if (response) {
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok && response.status !== 404) {
+                        throw new Error(data.message || data.error || 'Email hoặc số điện thoại đã tồn tại trong hệ thống!');
+                    }
+                }
             }
 
             router.push('/verify-otp?action=register');
