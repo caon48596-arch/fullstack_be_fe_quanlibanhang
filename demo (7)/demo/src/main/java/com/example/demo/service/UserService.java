@@ -74,14 +74,18 @@ public class UserService {
             role = "ROLE_CLIENT";
         }
 
-        String token = jwtUtil.generateToken(user.getEmail(), role);
+        String tokenSubject = (user.getEmail() != null && !user.getEmail().trim().isEmpty())
+                ? user.getEmail()
+                : (user.getPhone() != null && !user.getPhone().trim().isEmpty() ? user.getPhone() : user.getUsername());
+
+        String token = jwtUtil.generateToken(tokenSubject, role);
 
         user.setOnline(true);
         userRepository.save(user);
         return new UserLoginDTO(
                 user.getId(),
                 user.getUsername(),
-                user.getEmail(),
+                user.getEmail() != null ? user.getEmail() : user.getPhone(),
                 null, // password
                 token);
     }

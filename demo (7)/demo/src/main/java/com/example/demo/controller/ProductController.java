@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.Repository.CategoryRepository;
+import com.example.demo.Repository.OrderItemRepository;
 import com.example.demo.Repository.ProductRepository;
+import com.example.demo.entity.OrderItem;
 import com.example.demo.entity.Product;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/products")
@@ -26,6 +29,9 @@ public class ProductController {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
 
     @GetMapping
     public ResponseEntity<List<Product>> getAllProducts() {
@@ -81,8 +87,17 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         try {
+            // Gỡ liên kết sản phẩm khỏi đơn hàng cũ để không bị chặn bởi khóa ngoại
+            List<OrderItem> items = orderItemRepository.findAll();
+            for (OrderItem item : items) {
+                if (item.getProduct() != null && item.getProduct().getId().equals(id)) {
+                    item.setProduct(null);
+                    orderItemRepository.save(item);
+                }
+            }
             productRepository.deleteById(id);
             return ResponseEntity.noContent().build();
         } catch (org.springframework.dao.DataIntegrityViolationException e) {

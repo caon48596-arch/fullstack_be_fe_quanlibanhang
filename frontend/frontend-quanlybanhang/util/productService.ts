@@ -34,8 +34,8 @@ const cleanLegacyFakeProducts = () => {
         if (raw) {
             const list: Product[] = JSON.parse(raw);
             if (Array.isArray(list)) {
-                // Loại bỏ bất kỳ sản phẩm ảo có ID 1001-1012 hoặc timestamp > 100000000000
-                const cleaned = list.filter(p => p.id && p.id < 1000);
+                // Loại bỏ bất kỳ sản phẩm ảo cũ nào (ID khởi tạo từ hình 12-18 hoặc ID >= 1000)
+                const cleaned = list.filter(p => p.id && ![12, 13, 14, 15, 16, 17, 18].includes(p.id) && p.id < 1000);
                 if (cleaned.length !== list.length) {
                     localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(cleaned));
                 }
@@ -88,7 +88,7 @@ export const productService = {
                 if (raw) {
                     const parsed = JSON.parse(raw);
                     if (Array.isArray(parsed)) {
-                        return parsed.filter(p => p.id && p.id < 1000);
+                        return parsed.filter(p => p.id && ![12, 13, 14, 15, 16, 17, 18].includes(p.id) && p.id < 1000);
                     }
                 }
             } catch {}

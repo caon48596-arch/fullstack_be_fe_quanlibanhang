@@ -41,13 +41,17 @@ public class ProductService {
     // cặp nhật sl sản phẩm
     @Transactional
     public void reduceStock(long id, int quantity) {
+        if (quantity <= 0) {
+            throw new RuntimeException("Số lượng phải lớn hơn 0");
+        }
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("không có sẵn phẩm"));
 
-        if (product.getStock() < quantity) {
+        int currentStock = product.getStock() != null ? product.getStock() : 0;
+        if (currentStock < quantity) {
             throw new RuntimeException("sản phẩm k đủ");
         }
 
-        product.setStock(product.getStock() - quantity);
+        product.setStock(currentStock - quantity);
         productRepository.save(product);
     }
 

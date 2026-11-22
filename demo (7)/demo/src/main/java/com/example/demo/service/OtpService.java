@@ -15,22 +15,26 @@ public class OtpService {
     private final Random random = new Random();
 
     public String generateOtp(String identifier) {
+        if (identifier == null || identifier.trim().isEmpty()) {
+            throw new RuntimeException("Email hoặc số điện thoại không được để trống.");
+        }
+
         // Tạo mã OTP 6 chữ số
         String otp = String.format("%06d", random.nextInt(1000000));
 
         // Hạn sử dụng: 5 phút (300 giây) từ thời điểm tạo
         OtpData data = new OtpData(otp, LocalDateTime.now().plusSeconds(300));
-        otpStorage.put(identifier, data);
+        otpStorage.put(identifier.trim(), data);
 
         return otp;
     }
 
     public void verifyOtp(String identifier, String otp) {
-        if (identifier == null || otp == null) {
+        if (identifier == null || identifier.trim().isEmpty() || otp == null || otp.trim().isEmpty()) {
             throw new RuntimeException("Thiếu thông tin xác thực OTP.");
         }
 
-        OtpData data = otpStorage.get(identifier);
+        OtpData data = otpStorage.get(identifier.trim());
 
         if (data == null) {
             throw new RuntimeException("Mã OTP không tồn tại hoặc đã hết hạn.");

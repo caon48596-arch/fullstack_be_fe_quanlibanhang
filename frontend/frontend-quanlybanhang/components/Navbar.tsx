@@ -22,21 +22,21 @@ import {
 const cx = (...parts: string[]) => parts.filter(Boolean).join(' ');
 
 export default function Navbar() {
-    const router   = useRouter();
+    const router = useRouter();
     const pathname = usePathname();
 
     /* ── State ── */
-    const [isLoggedIn, setIsLoggedIn]             = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const { cartItems, cartCount, cartTotal, removeFromCart, updateQuantity } = useCart();
-    const [isCartOpen, setIsCartOpen]             = useState(false);
+    const [isCartOpen, setIsCartOpen] = useState(false);
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen]   = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen]       = useState(false);
-    const [settingsForm, setSettingsForm]           = useState({ dob: '', phone: '', email: '' });
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settingsForm, setSettingsForm] = useState({ dob: '', phone: '', email: '' });
     const [isUpdatingSettings, setIsUpdatingSettings] = useState(false);
-    const [searchTerm, setSearchTerm]               = useState('');
-    const [userRole, setUserRole]                   = useState<string | null>(null);
-    const [userName, setUserName]                   = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [userName, setUserName] = useState<string | null>(null);
 
     const isAdmin = userRole === 'ROLE_ADMIN' || userRole === 'ADMIN';
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
@@ -44,9 +44,7 @@ export default function Navbar() {
     /* ── Đọc token khi pathname thay đổi ── */
     useEffect(() => {
         try {
-            const token = typeof window !== 'undefined'
-                ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
-                : null;
+            const token = sessionStorage.getItem('accessToken');
             setIsLoggedIn(!!token);
             if (token) {
                 setUserRole(getUserRoleFromToken());
@@ -80,7 +78,6 @@ export default function Navbar() {
     const handleLogout = () => {
         try {
             sessionStorage.removeItem('accessToken');
-            localStorage.removeItem('accessToken');
             setIsLoggedIn(false);
             setUserRole(null);
             setUserName(null);
@@ -100,7 +97,7 @@ export default function Navbar() {
     const handleOpenSettings = async () => {
         setIsSettingsOpen(true);
         try {
-            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken');
             const res = await fetch(`${apiBase}/users/profile`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
@@ -110,7 +107,7 @@ export default function Navbar() {
                     setSettingsForm({
                         email: data.email || '',
                         phone: data.phone || '',
-                        dob:   data.dob   || '',
+                        dob: data.dob || '',
                     });
                 }
             }
@@ -123,7 +120,7 @@ export default function Navbar() {
         e.preventDefault();
         setIsUpdatingSettings(true);
         try {
-            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken');
             const res = await fetch(`${apiBase}/users/update`, {
                 method: 'PUT',
                 headers: {
@@ -132,7 +129,7 @@ export default function Navbar() {
                 },
                 body: JSON.stringify({
                     email: userName,
-                    dob:   settingsForm.dob,
+                    dob: settingsForm.dob,
                     phone: settingsForm.phone,
                     ...(settingsForm.email ? { email: settingsForm.email } : {}),
                 }),
@@ -277,7 +274,7 @@ export default function Navbar() {
 
                                                     {/* Thông tin sản phẩm */}
                                                     <div className="flex-1 min-w-0 pr-1">
-                                                        <p className="text-xs sm:text-sm font-bold text-black truncate" title={item.name}>
+                                                        <p className="text-xs sm:text-sm font-bold text-slate-800 truncate" title={item.name}>
                                                             {item.name}
                                                         </p>
                                                         <p className="text-xs font-bold text-[#d70018] my-1">
@@ -289,16 +286,16 @@ export default function Navbar() {
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, item.quantity - 1); }}
                                                                 disabled={item.quantity <= 1}
-                                                                className="px-2 py-0.5 text-black hover:bg-slate-200 rounded-l-full disabled:opacity-40 transition-colors cursor-pointer"
+                                                                className="px-2 py-0.5 text-slate-600 hover:text-black hover:bg-slate-200 rounded-l-full disabled:opacity-40 transition-colors"
                                                             >
                                                                 <Minus size={11} />
                                                             </button>
-                                                            <span className="text-xs font-bold px-2 min-w-5 text-center text-black">
+                                                            <span className="text-xs font-bold px-2 min-w-5 text-center text-slate-800">
                                                                 {item.quantity}
                                                             </span>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, item.quantity + 1); }}
-                                                                className="px-2 py-0.5 text-black hover:bg-slate-200 rounded-r-full transition-colors cursor-pointer"
+                                                                className="px-2 py-0.5 text-slate-600 hover:text-black hover:bg-slate-200 rounded-r-full transition-colors"
                                                             >
                                                                 <Plus size={11} />
                                                             </button>
@@ -322,17 +319,17 @@ export default function Navbar() {
                                     {cartItems.length > 0 && (
                                         <div className="p-4 border-t border-slate-100 bg-slate-50">
                                             <div className="flex justify-between items-center mb-3">
-                                                <span className="text-xs font-bold text-black">Tổng thanh toán:</span>
+                                                <span className="text-xs font-semibold text-slate-600">Tổng thanh toán:</span>
                                                 <span className="text-base font-extrabold text-[#d70018]">
                                                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cartTotal)}
                                                 </span>
                                             </div>
                                             <Link
-                                                href={isLoggedIn ? "/orders" : "/login?redirect=/orders"}
+                                                href="/orders"
                                                 onClick={() => setIsCartOpen(false)}
-                                                className="block w-full text-center bg-[#173B70] hover:bg-[#0866e8] text-white font-bold text-sm py-2.5 rounded-full transition-all shadow-md cursor-pointer"
+                                                className="block w-full text-center bg-[#173B70] hover:bg-[#0866e8] text-white font-bold text-sm py-2.5 rounded-full transition-all shadow-md"
                                             >
-                                                {isLoggedIn ? "Tiến Hành Đặt Hàng" : "Đăng Nhập Để Thanh Toán"}
+                                                Tiến Hành Đặt Hàng
                                             </Link>
                                         </div>
                                     )}
@@ -356,6 +353,7 @@ export default function Navbar() {
                         <div className={cx(navbarStyles.accountDropdown, accountDropdownVisibility)}>
                             {isLoggedIn ? (
                                 <>
+
                                     {/* Thông tin user */}
                                     <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/80 rounded-t-2xl">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản</p>

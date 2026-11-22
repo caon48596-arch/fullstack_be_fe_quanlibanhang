@@ -43,7 +43,7 @@ public class CategoryService {
 
     // Delete
     public void delete(Long id) {
-        if (categoryRepository.existsById(id)) {
+        if (!categoryRepository.existsById(id)) {
             throw new RuntimeException("không tìm thấy " + id + " để xóa");
         }
         categoryRepository.deleteById(id);

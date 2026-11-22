@@ -59,15 +59,16 @@ public class OrderService {
                 .sum();
                 
         // Áp dụng mã giảm giá nếu có
-        if (couponCode != null && !couponCode.isEmpty()) {
-            Optional<Coupon> couponOpt = couponRepository.findByCodeForUpdate(couponCode);
+        if (couponCode != null && !couponCode.trim().isEmpty()) {
+            Optional<Coupon> couponOpt = couponRepository.findByCodeForUpdate(couponCode.trim());
             if (couponOpt.isPresent()) {
                 Coupon coupon = couponOpt.get();
-                if (coupon.isActive() && coupon.getQuantity() > 0) {
+                if (coupon.isActive() && coupon.getQuantity() != null && coupon.getQuantity() > 0) {
                     if (coupon.getExpirationDate() != null && coupon.getExpirationDate().isBefore(LocalDateTime.now())) {
                         throw new RuntimeException("Mã giảm giá đã hết hạn sử dụng");
                     }
-                    totalAmount = totalAmount - coupon.getDiscountAmount();
+                    double discount = coupon.getDiscountAmount() != null ? coupon.getDiscountAmount() : 0.0;
+                    totalAmount = totalAmount - discount;
                     if (totalAmount < 0) totalAmount = 0;
                     
                     coupon.setQuantity(coupon.getQuantity() - 1);
@@ -78,6 +79,8 @@ public class OrderService {
                 } else {
                     throw new RuntimeException("Mã giảm giá đã hết lượt sử dụng hoặc không hợp lệ");
                 }
+            } else {
+                throw new RuntimeException("Mã giảm giá không tồn tại");
             }
         }
 
@@ -99,7 +102,7 @@ public class OrderService {
     }
 
     public Order ReadOne(Long id) {
-        return orderRepository.findById(id).orElseThrow(() -> new RuntimeException("không tìm thấy id sản phẩm"));
+        return orderRepository.findById(id).orElseThrow(() -> new RuntimeException("không tìm thấy đơn hàng"));
     }
 
     public List<OrderItem> ReadAll() {

@@ -66,16 +66,9 @@ export default function ProductsPage() {
             return;
         }
 
-        const fallbackImages = [
-            '/HINH_TRANG_CHU/IP16PRM.JPG',
-            '/HINH_TRANG_CHU/MACBM2.JPG',
-            '/HINH_TRANG_CHU/TAINGHE.JPG',
-            '/HINH_TRANG_CHU/CHUOT.JPG',
-            '/HINH_TRANG_CHU/ipad.jpg'
-        ];
         const rawImageUrl = product.imageUrl && product.imageUrl.trim() !== '' 
             ? product.imageUrl 
-            : (product.image_url || product.image || product.img || fallbackImages[product.id % fallbackImages.length]);
+            : (product.image_url || product.image || product.img || '/HINH_TRANG_CHU/logo2.jpg');
         
         addToCart({
             id: product.id,
