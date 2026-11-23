@@ -21,8 +21,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy user với email: " + email));
 
-        // Lấy role từ database (ví dụ: "ROLE_ADMIN" hoặc "ROLE_CLIENT"),
-        // nếu lỡ DB trống thì mặc định gán ROLE_CLIENT để an toàn hệ thống
+        // Mặc định ROLE_CLIENT nếu bản ghi trong DB chưa có role
         String role = user.getRole() != null ? user.getRole() : "ROLE_CLIENT";
 
         return org.springframework.security.core.userdetails.User

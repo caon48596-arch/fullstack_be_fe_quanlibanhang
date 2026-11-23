@@ -61,7 +61,6 @@ export default function CheckoutPage() {
     const handleCheckout = async () => {
         if (cartItems.length === 0) return;
 
-        // Bắt buộc khách hàng phải đăng nhập nếu muốn thanh toán
         const token = typeof window !== 'undefined'
             ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
             : null;
@@ -92,7 +91,6 @@ export default function CheckoutPage() {
                 })
             });
 
-            // Tạo thông tin hóa đơn với ngày giờ hiện tại
             const now = new Date();
             const formattedDateTime = now.toLocaleString('vi-VN', {
                 year: 'numeric',
@@ -155,7 +153,6 @@ export default function CheckoutPage() {
 
     return (
         <div className="w-full flex flex-col gap-6 py-4 text-black">
-            {/* Header */}
             <div className="bg-white rounded-[20px] shadow-[5px_5px_15px_#173B70] px-6 py-4 flex items-center justify-between border border-blue-900/10">
                 <div className="flex items-center gap-3">
                     <Link href="/" className="text-black hover:text-[#173B70] transition-colors p-1" title="Về trang chủ">
@@ -177,7 +174,6 @@ export default function CheckoutPage() {
                 )}
             </div>
 
-            {/* Thông báo yêu cầu đăng nhập nếu khách hàng chưa đăng nhập */}
             {!isLoggedIn && cartItems.length > 0 && (
                 <div className="bg-amber-50 border-2 border-amber-300 rounded-[18px] p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
                     <div className="flex items-center gap-3 text-black">
@@ -201,7 +197,6 @@ export default function CheckoutPage() {
             )}
 
             <div className="flex flex-col lg:flex-row gap-6">
-                {/* Danh sách món hàng */}
                 <div className="flex-1 space-y-4">
                     {cartItems.map((item) => (
                         <div 
@@ -265,7 +260,6 @@ export default function CheckoutPage() {
                     ))}
                 </div>
 
-                {/* Khung thanh toán tóm tắt */}
                 <div className="w-full lg:w-[400px]">
                     <div className="bg-white p-6 rounded-[20px] shadow-[5px_5px_15px_#173B70] border border-blue-900/10 sticky top-24">
                         <h2 className="text-lg font-black text-black mb-4 pb-3 border-b-2 border-[#173B70] tracking-wide">
@@ -297,7 +291,6 @@ export default function CheckoutPage() {
                             )}
                         </div>
 
-                        {/* Mã giảm giá */}
                         <div className="mb-5">
                             <label className="block text-xs font-bold text-black mb-1.5 flex items-center gap-1">
                                 <Tag size={14} /> Mã Giảm Giá
@@ -345,7 +338,6 @@ export default function CheckoutPage() {
                             </span>
                         </div>
 
-                        {/* Nút hành động thanh toán */}
                         {isLoggedIn ? (
                             <button
                                 onClick={handleCheckout}
@@ -374,11 +366,9 @@ export default function CheckoutPage() {
                 </div>
             </div>
 
-            {/* MODAL HÓA ĐƠN THEO NGÀY GIỜ HIỆN TẠI */}
             {createdInvoice && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
                     <div className="bg-white rounded-2xl w-full max-w-2xl border-2 border-[#173B70] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col text-black">
-                        {/* Header Hóa Đơn */}
                         <div className="bg-[#173B70] text-white p-5 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white/10 rounded-xl">
@@ -394,9 +384,7 @@ export default function CheckoutPage() {
                             </span>
                         </div>
 
-                        {/* Nội dung Hóa Đơn */}
                         <div className="p-6 overflow-y-auto space-y-5 text-black">
-                            {/* Thông tin hóa đơn và ngày giờ tạo */}
                             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                 <div>
                                     <span className="text-black font-semibold">Mã hóa đơn:</span>
@@ -416,7 +404,6 @@ export default function CheckoutPage() {
                                 </div>
                             </div>
 
-                            {/* Bảng chi tiết sản phẩm */}
                             <div>
                                 <h3 className="text-xs font-black text-black uppercase tracking-wider mb-2">Chi tiết sản phẩm</h3>
                                 <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -447,7 +434,6 @@ export default function CheckoutPage() {
                                 </div>
                             </div>
 
-                            {/* Tổng tiền và mã giảm giá */}
                             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-xs">
                                 <div className="flex justify-between text-black">
                                     <span className="font-semibold">Tạm tính:</span>
@@ -472,7 +458,6 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
-                        {/* Footer nút hành động */}
                         <div className="bg-slate-100 p-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
                             <button
                                 onClick={() => window.print()}

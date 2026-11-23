@@ -1,8 +1,6 @@
 import { sendOtpEmail } from './emailSender';
 
-/**
- * Gửi email chứa mã OTP (Tương thích ngược với interface cũ, hỗ trợ SMTP + Resend)
- */
+// Wrapper tương thích ngược với interface gửi OTP cũ
 export async function sendOtpViaResend(params: {
     to: string;
     otp: string;

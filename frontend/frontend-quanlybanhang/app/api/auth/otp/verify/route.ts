@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         let isOtpValid = false;
         let failReason = '';
 
-        // 1. Kiểm tra qua session token (đặc biệt hữu dụng khi deploy serverless không có DB tập trung)
+        // Ưu tiên xác thực stateless qua session token (serverless), fallback sang DynamoDB/Memory
         if (otpSessionToken) {
             const tokenVerification = verifyOtpWithSessionToken(otpSessionToken, normalizedEmail, submittedOtp);
             if (tokenVerification.valid) {
@@ -32,7 +32,6 @@ export async function POST(req: Request) {
             }
         }
 
-        // 2. Nếu chưa thành công, kiểm tra trong kho lưu trữ DynamoDB / Memory
         if (!isOtpValid) {
             const record = await getOtpFromDynamoDB(normalizedEmail);
 
@@ -78,7 +77,6 @@ export async function POST(req: Request) {
             );
         }
 
-        // 3. Kết nối đến backend Spring Boot để xác thực mật khẩu và cấp Token
         let backendUser = null;
         let token = null;
 
@@ -92,7 +90,6 @@ export async function POST(req: Request) {
                         body: JSON.stringify({ email: normalizedEmail, password }),
                     });
                 } catch {
-                    // Nếu BACKEND_API_BASE cục bộ chưa mở, kết nối dự phòng sang Railway
                     if (BACKEND_API_BASE.includes('localhost')) {
                         loginRes = await fetch('https://project1-production-6826.up.railway.app/api/users/login', {
                             method: 'POST',
@@ -112,7 +109,7 @@ export async function POST(req: Request) {
             }
         }
 
-        // Nếu không có token từ backend, sinh JWT chuẩn 3 phần (header.payload.signature)
+        // Sinh JWT fallback (hiệu lực 24h) nếu không lấy được token từ backend
         if (!token) {
             const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
             const payload = Buffer.from(JSON.stringify({
@@ -120,7 +117,7 @@ export async function POST(req: Request) {
                 username: normalizedEmail.split('@')[0],
                 role: 'ROLE_CLIENT',
                 iat: Math.floor(Date.now() / 1000),
-                exp: Math.floor(Date.now() / 1000) + 86400, // 24 giờ
+                exp: Math.floor(Date.now() / 1000) + 86400,
             })).toString('base64url');
             const signature = Buffer.from(`ipworld_verified_${Date.now()}`).toString('base64url');
             token = `${header}.${payload}.${signature}`;

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { fetchClient, getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import { productService } from '@/util/productService';
-import { ArrowLeft, TrendingUp, Image as ImageIcon, Video, Package, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Video, Check, Sparkles } from 'lucide-react';
 
 interface ProductFormData {
     name: string;
@@ -95,6 +95,13 @@ export default function CreateProductPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const role = getUserRoleFromToken();
+        if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
+            alert("Cấm tuyệt đối: Chỉ có Quản trị viên (Admin) mới có quyền thêm sản phẩm!");
+            router.push('/');
+            return;
+        }
+
         setIsSaving(true);
         setError(null);
 
@@ -150,7 +157,6 @@ export default function CreateProductPage() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6 w-full">
-            {/* Thanh điều hướng đầu trang */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
                 <div className="flex items-center gap-3">
                     <Link
@@ -165,17 +171,8 @@ export default function CreateProductPage() {
                         <p className="text-xs text-slate-500 font-medium">Bổ sung hình ảnh, video, tên sản phẩm và giá cả</p>
                     </div>
                 </div>
-
-                {/* Nút trở về coi doanh thu chi tiết theo ngày */}
-                <Link
-                    href="/admin#daily-revenue"
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all whitespace-nowrap"
-                >
-                    <TrendingUp size={16} /> Coi doanh thu theo ngày
-                </Link>
             </div>
 
-            {/* Form Thêm Sản Phẩm */}
             <div className="bg-white rounded-2xl shadow-md border border-blue-900/10 p-5 sm:p-7">
                 {error && (
                     <div className="p-3 mb-5 rounded-xl text-xs font-bold bg-red-100 text-red-700 border border-red-200">
@@ -184,7 +181,6 @@ export default function CreateProductPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Tên sản phẩm & Danh mục */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-[#173B70] mb-1">
@@ -220,7 +216,6 @@ export default function CreateProductPage() {
                         </div>
                     </div>
 
-                    {/* Giá bán & Số lượng kho */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-[#173B70] mb-1">
@@ -255,7 +250,6 @@ export default function CreateProductPage() {
                         </div>
                     </div>
 
-                    {/* Hình ảnh sản phẩm (Image URL) */}
                     <div>
                         <label className="block text-xs font-bold text-[#173B70] mb-1 flex items-center gap-1.5">
                             <ImageIcon size={15} /> Đường dẫn hình ảnh (Image URL)
@@ -268,7 +262,6 @@ export default function CreateProductPage() {
                             placeholder="Nhập link ảnh (https://... hoặc /HINH_DIEN_THOAI/ip16pro.jpg)"
                             className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl outline-none focus:border-[#173B70] focus:ring-1 focus:ring-[#173B70] transition-colors"
                         />
-                        {/* Gợi ý chọn ảnh mẫu */}
                         <div className="flex flex-wrap items-center gap-1.5 mt-2">
                             <span className="text-[11px] font-semibold text-slate-500">Mẫu có sẵn:</span>
                             {[
@@ -290,7 +283,6 @@ export default function CreateProductPage() {
                         </div>
                     </div>
 
-                    {/* Video sản phẩm (Video URL) */}
                     <div>
                         <label className="block text-xs font-bold text-[#173B70] mb-1 flex items-center gap-1.5">
                             <Video size={15} /> Đường dẫn video giới thiệu (Video URL)
@@ -303,7 +295,6 @@ export default function CreateProductPage() {
                             placeholder="Nhập link video MP4 (https://... hoặc /HINH_TRANG_CHU/...)"
                             className="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl outline-none focus:border-[#173B70] focus:ring-1 focus:ring-[#173B70] transition-colors"
                         />
-                        {/* Gợi ý chọn video mẫu */}
                         <div className="flex flex-wrap items-center gap-1.5 mt-2">
                             <span className="text-[11px] font-semibold text-slate-500">Video mẫu:</span>
                             {[
@@ -322,7 +313,6 @@ export default function CreateProductPage() {
                         </div>
                     </div>
 
-                    {/* Khung Xem Trước (Live Preview) Hình Ảnh & Video */}
                     {(formData.imageUrl || formData.videoUrl) && (
                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
                             <p className="text-xs font-bold text-slate-600 mb-3 flex items-center gap-1.5">
@@ -360,7 +350,6 @@ export default function CreateProductPage() {
                         </div>
                     )}
 
-                    {/* Mô tả sản phẩm */}
                     <div>
                         <label className="block text-xs font-bold text-[#173B70] mb-1">Mô tả sản phẩm</label>
                         <textarea
@@ -373,31 +362,21 @@ export default function CreateProductPage() {
                         />
                     </div>
 
-                    {/* Thao tác lưu & Trở về doanh thu */}
-                    <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <Link
-                            href="/admin#daily-revenue"
-                            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1.5"
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
                         >
-                            <TrendingUp size={15} /> Trở về coi doanh thu chi tiết theo ngày
-                        </Link>
-
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <button
-                                type="button"
-                                onClick={() => router.back()}
-                                className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
-                            >
-                                Hủy
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isSaving}
-                                className="flex-1 sm:flex-none px-6 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#173B70] hover:bg-[#0866e8] transition-all disabled:opacity-50 shadow-md flex items-center justify-center gap-1.5"
-                            >
-                                <Check size={16} /> {isSaving ? 'Đang lưu...' : 'Thêm Sản Phẩm'}
-                            </button>
-                        </div>
+                            Hủy
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            className="flex-1 sm:flex-none px-6 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-[#173B70] hover:bg-[#0866e8] transition-all disabled:opacity-50 shadow-md flex items-center justify-center gap-1.5"
+                        >
+                            <Check size={16} /> {isSaving ? 'Đang lưu...' : 'Thêm Sản Phẩm'}
+                        </button>
                     </div>
                 </form>
             </div>

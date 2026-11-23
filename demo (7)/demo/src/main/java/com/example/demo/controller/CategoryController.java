@@ -26,9 +26,9 @@ public class CategoryController {
     private CategoryService categoryService;
 
     @PostMapping("/Create")
-    public ResponseEntity<ResponseDTO<String>> createController(@RequestBody CategoryCreateDTO categoryCreateDTO) {
+    public ResponseEntity<ResponseDTO<String>> createCategory(@RequestBody CategoryCreateDTO categoryCreateDTO) {
         try {
-            categoryService.create(categoryCreateDTO.getName());
+            categoryService.createCategory(categoryCreateDTO.getName());
             return ResponseEntity.ok(ResponseDTO.success("khởi tạo thành công"));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(ResponseDTO.error("tên danh mục đã tồn tại", "401"));
@@ -36,9 +36,9 @@ public class CategoryController {
     }
 
     @GetMapping("/Read")
-    public ResponseEntity<ResponseDTO<String>> readController(@RequestBody CategoryReadOneDTO categoryReadOneDTO) {
+    public ResponseEntity<ResponseDTO<String>> getCategory(@RequestBody CategoryReadOneDTO categoryReadOneDTO) {
         try {
-            categoryService.get(categoryReadOneDTO.getName());
+            categoryService.getCategoryByName(categoryReadOneDTO.getName());
             return ResponseEntity.ok(ResponseDTO.success("đã tìm thấy "));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(ResponseDTO.error("không tìm  thấy tên danh mục", "401"));
@@ -46,7 +46,7 @@ public class CategoryController {
     }
 
     @GetMapping("/ReadAll")
-    public ResponseEntity<ResponseDTO<String>> readAllController() {
+    public ResponseEntity<ResponseDTO<String>> getAllCategoriesOverview() {
         try {
             return ResponseEntity.ok(ResponseDTO.success("đã tìm thấy "));
         } catch (Exception e) {
@@ -57,31 +57,29 @@ public class CategoryController {
     @GetMapping
     public ResponseEntity<List<Category>> getAllCategories() {
         try {
-            return ResponseEntity.ok(categoryService.getAll());
+            return ResponseEntity.ok(categoryService.getAllCategories());
         } catch (Exception e) {
             return ResponseEntity.ok(java.util.Collections.emptyList());
         }
     }
 
     @PostMapping("/Update")
-    public ResponseEntity<ResponseDTO<String>> updatedcontroller(@RequestBody CategoryUpdateDTO categoryUpdateDTO) {
+    public ResponseEntity<ResponseDTO<String>> updateCategory(@RequestBody CategoryUpdateDTO categoryUpdateDTO) {
         try {
-            categoryService.update(categoryUpdateDTO.getId(), categoryUpdateDTO.getName());
+            categoryService.updateCategory(categoryUpdateDTO.getId(), categoryUpdateDTO.getName());
             return ResponseEntity.ok(ResponseDTO.success("đã cặp nhật thành công"));
-
         } catch (Exception e) {
             return ResponseEntity.status(401).body(ResponseDTO.error("không tìm thấy tên và id để cặp nhật", "401"));
         }
     }
 
     @PostMapping("/Delete")
-    public ResponseEntity<ResponseDTO<String>> deletedcontroller(@RequestBody CategoryDeleteDTO categoryDeleteDTO) {
+    public ResponseEntity<ResponseDTO<String>> deleteCategory(@RequestBody CategoryDeleteDTO categoryDeleteDTO) {
         try {
-            categoryService.delete(categoryDeleteDTO.getId());
+            categoryService.deleteCategory(categoryDeleteDTO.getId());
             return ResponseEntity.ok(ResponseDTO.success("đã xóa thành công"));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(ResponseDTO.error("không tìm thấy tên và id để xóa", "401"));
         }
     }
-
 }

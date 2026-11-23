@@ -43,44 +43,29 @@ public class SecurityConfig {
 
         http
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Cho phép tất cả các request OPTIONS (CORS Preflight)
+                        // CORS preflight & public endpoints
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // 2. Cho phép xem danh sách sản phẩm, danh mục và kiểm tra mã giảm giá tự do (GET)
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**", "/api/categories", "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/coupons/validate/**").permitAll()
+                        .requestMatchers("/api/v1/system/health", "/api/login", "/api/users/register", "/api/users/login", "/api/users/request-otp", "/api/users/login-otp", "/error").permitAll()
 
-                        // 3. Cho phép API đăng nhập, đăng ký và health check không cần token
-                        .requestMatchers("/api/v1/system/health", "/api/users/register", "/api/users/login", "/api/users/request-otp", "/api/users/login-otp", "/error").permitAll()
-
-                        // 4. Các quyền quản trị viên (Chỉ Admin mới được truy cập)
-                        // Quản lý Dashboard doanh thu, thống kê
+                        // Admin only
                         .requestMatchers("/api/dashboard/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-
-                        // Thêm, sửa, xóa sản phẩm
                         .requestMatchers(HttpMethod.POST, "/api/products", "/api/products/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/products", "/api/products/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products", "/api/products/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-
-                        // Thêm, sửa, xóa danh mục
                         .requestMatchers(HttpMethod.POST, "/api/categories/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-
-                        // Quản lý mã giảm giá (Xem toàn bộ coupon, tạo mã, xóa mã)
                         .requestMatchers(HttpMethod.GET, "/api/coupons").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/coupons", "/api/coupons/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/coupons/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
-
-                        // Quản trị đơn hàng (Cập nhật trạng thái đơn, xem toàn bộ chi tiết đơn)
-                        .requestMatchers(HttpMethod.PUT, "/api/orders/**/status").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/orders/*/status", "/api/orders/item/*/status").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/orders/ReadAll").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
 
-                        // 5. Khách hàng: Tạo hóa đơn / Thanh toán và xem đơn hàng yêu cầu đăng nhập
+                        // Authenticated users
                         .requestMatchers(HttpMethod.POST, "/api/orders/CreateAndSum").authenticated()
                         .requestMatchers("/api/orders/my-orders", "/api/orders/my-order-items").authenticated()
-
-                        // 6. Tất cả request còn lại (thông tin profile,...) yêu cầu đăng nhập
                         .anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -1,10 +1,12 @@
-package com.example.demo.service;
+package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import com.example.demo.service.OtpService;
 
 class OtpServiceTest {
 
@@ -78,12 +80,10 @@ class OtpServiceTest {
         String identifier = "user@example.com";
         otpService.generateOtp(identifier);
 
-        // Thử sai 4 lần
         for (int i = 0; i < 4; i++) {
             assertThrows(RuntimeException.class, () -> otpService.verifyOtp(identifier, "000000"));
         }
 
-        // Lần thứ 5 sẽ báo bị khóa/nhập sai quá 5 lần
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             otpService.verifyOtp(identifier, "000000");
         });

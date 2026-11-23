@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class OtpService {
 
-    // Lưu trữ mã OTP trong bộ nhớ: Key = email/sđt, Value = OtpData
+    // Lưu OTP trong bộ nhớ (key: email/SĐT), hiệu lực 5 phút, dùng 1 lần, tối đa 5 lần nhập sai
     private final Map<String, OtpData> otpStorage = new ConcurrentHashMap<>();
     private final Random random = new Random();
 
@@ -19,10 +19,7 @@ public class OtpService {
             throw new RuntimeException("Email hoặc số điện thoại không được để trống.");
         }
 
-        // Tạo mã OTP 6 chữ số
         String otp = String.format("%06d", random.nextInt(1000000));
-
-        // Hạn sử dụng: 5 phút (300 giây) từ thời điểm tạo
         OtpData data = new OtpData(otp, LocalDateTime.now().plusSeconds(300));
         otpStorage.put(identifier.trim(), data);
 
@@ -41,13 +38,13 @@ public class OtpService {
         }
 
         if (LocalDateTime.now().isAfter(data.expirationTime)) {
-            otpStorage.remove(identifier); // Đã hết hạn
+            otpStorage.remove(identifier);
             throw new RuntimeException("Mã OTP đã hết hạn. Vui lòng nhận mã mới.");
         }
 
         if (data.otp.equals(otp.trim())) {
-            otpStorage.remove(identifier); // Dùng 1 lần
-            return; // Thành công
+            otpStorage.remove(identifier);
+            return;
         }
 
         data.attempts++;

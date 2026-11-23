@@ -11,13 +11,12 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const resendFromEmail = process.env.RESEND_FROM_EMAIL || 'IPWORLD <onboarding@resend.dev>';
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-// Khởi tạo Transporter cho SMTP (hỗ trợ gửi đến mọi email người nhận khi deploy)
 const createTransporter = () => {
     if (!smtpUser || !smtpPass) return null;
     return nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,
-        secure: smtpPort === 465, // true cho port 465, false cho 587
+        secure: smtpPort === 465,
         auth: {
             user: smtpUser,
             pass: smtpPass,
@@ -25,9 +24,7 @@ const createTransporter = () => {
     });
 };
 
-/**
- * Gửi email mã OTP an toàn đến người dùng
- */
+// Thứ tự gửi fallback: SMTP -> Resend -> dev console
 export async function sendOtpEmail(params: {
     to: string;
     otp: string;
@@ -84,7 +81,6 @@ export async function sendOtpEmail(params: {
     </html>
     `;
 
-    // 1. Thử gửi qua SMTP (Gmail SMTP đảm bảo đến được mọi hòm thư của người dùng khi deploy)
     const transporter = createTransporter();
     if (transporter) {
         try {
@@ -105,7 +101,6 @@ export async function sendOtpEmail(params: {
         }
     }
 
-    // 2. Thử gửi qua Resend nếu có API key
     if (resend) {
         try {
             const data = await resend.emails.send({
@@ -125,7 +120,6 @@ export async function sendOtpEmail(params: {
         }
     }
 
-    // 3. Fallback dev console
     console.log(`[Email Dev Fallback] OTP cho ${to}: [ ${otp} ]`);
     return {
         success: true,

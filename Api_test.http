@@ -1,0 +1,232 @@
+@baseUrl = http://localhost:8080
+@contentType = application/json
+@adminToken = eyJhbGciOiJIUzI1NiJ9...
+@clientToken = eyJhbGciOiJIUzI1NiJ9...
+
+### 1.1 Health check
+GET {{baseUrl}}/api/v1/system/health
+
+### 2.1 Request OTP - Register
+POST {{baseUrl}}/api/users/request-otp
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "type": "REGISTER"
+}
+
+### 2.2 Request OTP - Login
+POST {{baseUrl}}/api/users/request-otp
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "type": "LOGIN"
+}
+
+### 2.3 Register with OTP
+POST {{baseUrl}}/api/users/register
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "password": "Password@123",
+  "username": "Nguyen Van A",
+  "phone": "0912345678",
+  "dob": "1998-08-18",
+  "otp": "123456"
+}
+
+### 2.4 Login
+# @name loginClient
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "password": "Password@123"
+}
+
+### 2.5 Login with OTP
+POST {{baseUrl}}/api/users/login-otp
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "password": "Password@123",
+  "otp": "123456"
+}
+
+### 2.6 Get Profile
+GET {{baseUrl}}/api/users/profile
+Authorization: Bearer {{clientToken}}
+
+### 2.7 Update Profile
+PUT {{baseUrl}}/api/users/update
+Authorization: Bearer {{clientToken}}
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "username": "Nguyen Van A (Cap Nhat)",
+  "phone": "0988776655",
+  "dob": "1998-08-20"
+}
+
+### 2.8 Logout
+POST {{baseUrl}}/api/users/logout
+Authorization: Bearer {{clientToken}}
+
+### 3.1 Get all categories
+GET {{baseUrl}}/api/categories
+
+### 3.2 Category overview
+GET {{baseUrl}}/api/categories/ReadAll
+
+### 3.3 Admin create category
+POST {{baseUrl}}/api/categories/Create
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "Thiết Bị Âm Thanh"
+}
+
+### 3.4 Admin update category
+POST {{baseUrl}}/api/categories/Update
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": 1,
+  "name": "Điện Thoại & Phụ Kiện Cao Cấp"
+}
+
+### 3.5 Admin delete category
+POST {{baseUrl}}/api/categories/Delete
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "id": 1
+}
+
+### 4.1 Get all products
+GET {{baseUrl}}/api/products
+
+### 4.2 Get product by ID
+GET {{baseUrl}}/api/products/1
+
+### 4.3 Get products by category ID
+GET {{baseUrl}}/api/products/category/1
+
+### 4.4 Admin create product
+POST {{baseUrl}}/api/products
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "iPhone 16 Pro Max",
+  "price": 32990000,
+  "stock": 25,
+  "description": "Siêu phẩm Apple thế hệ mới",
+  "category": {
+    "id": 1
+  }
+}
+
+### 4.5 Admin update product
+PUT {{baseUrl}}/api/products/1
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "name": "iPhone 16 Pro Max (Giảm Giá)",
+  "price": 31990000,
+  "stock": 20
+}
+
+### 4.6 Admin delete product
+DELETE {{baseUrl}}/api/products/1
+Authorization: Bearer {{adminToken}}
+
+### 5.1 Admin create coupon
+POST {{baseUrl}}/api/coupons
+Authorization: Bearer {{adminToken}}
+Content-Type: {{contentType}}
+
+{
+  "code": "SALE50K",
+  "discountAmount": 50000,
+  "quantity": 100
+}
+
+### 5.2 Admin get all coupons
+GET {{baseUrl}}/api/coupons
+Authorization: Bearer {{adminToken}}
+
+### 5.3 Validate coupon
+GET {{baseUrl}}/api/coupons/validate/SALE50K
+
+### 5.4 Admin delete coupon
+DELETE {{baseUrl}}/api/coupons/1
+Authorization: Bearer {{adminToken}}
+
+### 6.1 Place order
+POST {{baseUrl}}/api/orders/CreateAndSum
+Authorization: Bearer {{clientToken}}
+Content-Type: {{contentType}}
+
+{
+  "email": "testuser@gmail.com",
+  "couponCode": "SALE50K",
+  "items": [
+    {
+      "product": {
+        "id": 1
+      },
+      "quantity": 1
+    }
+  ]
+}
+
+### 6.2 Get my orders
+GET {{baseUrl}}/api/orders/my-orders
+Authorization: Bearer {{clientToken}}
+
+### 6.3 Get my order items
+GET {{baseUrl}}/api/orders/my-order-items
+Authorization: Bearer {{clientToken}}
+
+### 6.4 Get order by ID
+GET {{baseUrl}}/api/orders/ReadOne/1
+Authorization: Bearer {{clientToken}}
+
+### 6.5 Admin get all order items
+GET {{baseUrl}}/api/orders/ReadAll
+Authorization: Bearer {{adminToken}}
+
+### 6.6 Admin update order status (PENDING, CONFIRMED, COMPLETED, CANCELLED)
+PUT {{baseUrl}}/api/orders/1/status?status=CONFIRMED
+Authorization: Bearer {{adminToken}}
+
+### 6.7 Admin update order item status
+PUT {{baseUrl}}/api/orders/item/1/status?status=DELIVERED
+Authorization: Bearer {{adminToken}}
+
+### 7.1 Update order item quantity
+PUT {{baseUrl}}/api/order-items/1
+Authorization: Bearer {{clientToken}}
+Content-Type: {{contentType}}
+
+{
+  "quantity": 3
+}
+
+### 7.2 Delete order item
+DELETE {{baseUrl}}/api/order-items/1
+Authorization: Bearer {{clientToken}}
+
+### 8.1 Admin dashboard stats
+GET {{baseUrl}}/api/dashboard/stats
+Authorization: Bearer {{adminToken}}

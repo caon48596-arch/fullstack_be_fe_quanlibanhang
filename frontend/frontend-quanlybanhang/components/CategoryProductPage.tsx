@@ -1,21 +1,7 @@
 "use client";
 
-/**
- * CategoryProductPage — Component trang danh mục sản phẩm đơn lẻ
- *
- * Dùng chung cho tất cả trang danh mục: Điện Thoại, Laptop, PC, Màn Hình...
- * Mỗi trang chỉ cần truyền props tương ứng (xem ví dụ ở /dien-thoai/page.tsx).
- *
- * Tính năng:
- * - Tải sản phẩm theo danh mục từ API
- * - Tìm kiếm theo tên, lọc theo giá, sắp xếp
- * - User thường: nút "Thêm vào giỏ"
- * - Admin: nút "Sửa" + "Xóa" + modal "Thêm sản phẩm mới"
- */
-
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { fetchClient, getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import { productService, Product } from '@/util/productService';
 import { useCart } from '@/context/CartContext';
@@ -30,34 +16,21 @@ import {
     Home,
     X,
     Edit2,
-    TrendingUp,
     Sparkles,
 } from 'lucide-react';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface CategoryProductPageProps {
-    categoryName: string;      // Tên danh mục hiển thị, ví dụ: "Điện Thoại"
-    categorySlug: string;      // Slug dùng để query API, ví dụ: "dien-thoai"
-    categoryAliases?: string[]; // Tên khác của danh mục để khớp rộng hơn
-    bannerImage: string;       // Ảnh đại diện danh mục
-    videoUrl?: string;         // Video giới thiệu (không bắt buộc)
-    icon?: React.ReactNode;    // Icon danh mục (không bắt buộc)
+    categoryName: string;
+    categorySlug: string;
+    categoryAliases?: string[];
+    bannerImage: string;
+    videoUrl?: string;
+    icon?: React.ReactNode;
 }
 
 type PriceRange = 'all' | 'under5' | '5to15' | '15to30' | 'above30';
 type SortBy = 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Lấy URL ảnh của sản phẩm.
- * Thử theo thứ tự: imageUrl → image_url → image → fallback (bannerImage)
- */
 function getProductImageUrl(product: Product, fallback: string): string {
     return (
         (product.imageUrl?.trim() !== '' ? product.imageUrl : null) ||
@@ -67,10 +40,6 @@ function getProductImageUrl(product: Product, fallback: string): string {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function CategoryProductPage({
     categoryName,
     categorySlug,
@@ -78,21 +47,17 @@ export default function CategoryProductPage({
     bannerImage,
     videoUrl,
 }: CategoryProductPageProps) {
-    const router = useRouter();
     const { addToCart } = useCart();
 
-    // ── State ──────────────────────────────────────────────────────────────
     const [products, setProducts] = useState<Product[]>([]);
     const [categoryId, setCategoryId] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userRole, setUserRole] = useState<string | null>(null);
 
-    // Tìm kiếm & Lọc & Sắp xếp
     const [searchKeyword, setSearchKeyword] = useState<string>('');
     const [priceRange, setPriceRange] = useState<PriceRange>('all');
     const [sortBy, setSortBy] = useState<SortBy>('newest');
 
-    // Modal thêm sản phẩm mới (chỉ dành cho admin)
     const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [newProduct, setNewProduct] = useState({
@@ -105,25 +70,20 @@ export default function CategoryProductPage({
 
     const isAdmin = userRole === 'ROLE_ADMIN' || userRole === 'ADMIN';
 
-    // ── Effects ────────────────────────────────────────────────────────────
-
-    // Đọc role user từ JWT token
     useEffect(() => {
         setUserRole(getUserRoleFromToken());
     }, []);
 
-    // Tải sản phẩm và lắng nghe thay đổi (thêm/sửa/xóa đồng bộ toàn hệ thống)
     useEffect(() => {
         loadProducts();
 
+        // Đồng bộ lại danh sách khi sản phẩm thay đổi từ trang khác
         const unsubscribe = productService.subscribe(loadProducts);
 
         return () => {
-            unsubscribe(); // Dọn dẹp khi component unmount
+            unsubscribe();
         };
     }, [categorySlug, categoryName]);
-
-    // ── Data Fetching ──────────────────────────────────────────────────────
 
     const loadProducts = async () => {
         setIsLoading(true);
@@ -141,10 +101,7 @@ export default function CategoryProductPage({
         }
     };
 
-    /**
-     * Tìm categoryId từ API /categories.
-     * Dùng khi cần tạo sản phẩm mới (phải gửi kèm categoryId cho backend).
-     */
+    // Tìm categoryId từ backend để gắn vào payload khi tạo sản phẩm mới
     const resolveCategoryId = async (): Promise<number | null> => {
         try {
             const categories = await fetchClient('/categories');
@@ -165,18 +122,11 @@ export default function CategoryProductPage({
         return null;
     };
 
-    // ── Derived Data ───────────────────────────────────────────────────────
-
-    /**
-     * Lọc và sắp xếp danh sách sản phẩm theo search, khoảng giá, thứ tự.
-     */
     const filteredProducts = products
         .filter(p => {
-            // Lọc theo tên
             if (searchKeyword && !p.name?.toLowerCase().includes(searchKeyword.toLowerCase().trim())) {
                 return false;
             }
-            // Lọc theo khoảng giá
             const price = p.price || 0;
             if (priceRange === 'under5' && price >= 5_000_000) return false;
             if (priceRange === '5to15' && (price < 5_000_000 || price > 15_000_000)) return false;
@@ -188,12 +138,9 @@ export default function CategoryProductPage({
             if (sortBy === 'price-asc') return (a.price || 0) - (b.price || 0);
             if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
             if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-            return (b.id || 0) - (a.id || 0); // Mặc định: mới nhất
+            return (b.id || 0) - (a.id || 0);
         });
 
-    // ── Handlers ───────────────────────────────────────────────────────────
-
-    /** Thêm sản phẩm vào giỏ hàng */
     const handleAddToCart = (product: Product) => {
         const imageUrl = getProductImageUrl(product, bannerImage);
         addToCart({
@@ -206,8 +153,12 @@ export default function CategoryProductPage({
         alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
     };
 
-    /** Xóa sản phẩm (chỉ admin) — đồng bộ toàn hệ thống qua productService */
     const handleDeleteProduct = async (id: number, name: string) => {
+        const role = getUserRoleFromToken();
+        if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
+            alert('Cấm tuyệt đối: Chỉ có Quản trị viên (Admin) mới có quyền xóa sản phẩm!');
+            return;
+        }
         if (!confirm(`Bạn có chắc muốn xóa "${name}"? Thao tác này sẽ xóa sản phẩm khỏi toàn bộ hệ thống.`)) return;
         try {
             await productService.deleteProduct(id, name);
@@ -219,9 +170,14 @@ export default function CategoryProductPage({
         }
     };
 
-    /** Lưu sản phẩm mới (chỉ admin) — đồng bộ về trang chủ qua productService */
     const handleSaveNewProduct = async (e: React.FormEvent) => {
         e.preventDefault();
+        const role = getUserRoleFromToken();
+        if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
+            alert('Cấm tuyệt đối: Chỉ có Quản trị viên (Admin) mới có quyền thêm sản phẩm!');
+            setIsAddModalOpen(false);
+            return;
+        }
         if (!newProduct.name.trim() || !newProduct.price) {
             alert('Vui lòng nhập tên và giá sản phẩm!');
             return;
@@ -229,7 +185,6 @@ export default function CategoryProductPage({
 
         setIsSaving(true);
         try {
-            // Lấy categoryId nếu chưa có
             const resolvedId = categoryId || (await resolveCategoryId()) || 1;
 
             const payload = {
@@ -245,7 +200,6 @@ export default function CategoryProductPage({
             await productService.createProduct(payload);
             alert(`Đã lưu "${payload.name}" thành công! Sản phẩm đã xuất hiện trên Trang chủ.`);
 
-            // Reset form và đóng modal
             setIsAddModalOpen(false);
             setNewProduct({
                 name: '',
@@ -264,12 +218,8 @@ export default function CategoryProductPage({
         }
     };
 
-    // ── Render ─────────────────────────────────────────────────────────────
-
     return (
         <div className="w-full flex flex-col gap-6">
-
-            {/* Breadcrumb điều hướng */}
             <nav className="flex items-center gap-2 text-xs font-semibold text-white/90 bg-[#173B70]/80 backdrop-blur-xs px-4 py-2 rounded-xl w-fit border border-white/10 shadow-xs">
                 <Link href="/" className="flex items-center gap-1 hover:text-blue-300 transition-colors">
                     <Home size={14} /> Trang chủ
@@ -278,14 +228,7 @@ export default function CategoryProductPage({
                 <span className="text-amber-400 font-bold">{categoryName}</span>
             </nav>
 
-            {/* ══════════════════════════════════════════════════════════════
-                PHẦN 1: HEADER DANH MỤC
-                - Ảnh đại diện + tên danh mục + số sản phẩm
-                - Video giới thiệu (nếu có)
-                - Admin: nút "Doanh thu" + nút "Thêm SP"
-            ══════════════════════════════════════════════════════════════ */}
             <div className="bg-white rounded-[20px] shadow-[4px_4px_15px_#173B70] p-4 sm:p-5 border-2 border-[#173B70]/20 flex flex-col lg:flex-row items-center justify-between gap-5">
-                {/* Ảnh + Tên + Số lượng */}
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-50 border-2 border-[#173B70]/20 p-2 flex items-center justify-center shrink-0 shadow-inner">
                         <img
@@ -305,7 +248,6 @@ export default function CategoryProductPage({
                     </div>
                 </div>
 
-                {/* Video giới thiệu (nếu có) */}
                 {videoUrl && (
                     <div className="w-full lg:w-96 xl:w-[420px] bg-black rounded-[16px] overflow-hidden border-2 border-[#173B70] shadow-md flex items-center justify-center max-h-[190px]">
                         <video
@@ -318,15 +260,8 @@ export default function CategoryProductPage({
                     </div>
                 )}
 
-                {/* Admin: nút Doanh Thu + Thêm Sản Phẩm */}
                 {isAdmin && (
                     <div className="flex items-center gap-2 shrink-0">
-                        <Link
-                            href="/admin#daily-revenue"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all whitespace-nowrap"
-                        >
-                            <TrendingUp size={15} /> Doanh thu ngày
-                        </Link>
                         <button
                             onClick={() => setIsAddModalOpen(true)}
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#173B70] hover:bg-[#0866e8] text-white font-bold text-xs shadow-md transition-all whitespace-nowrap"
@@ -337,18 +272,8 @@ export default function CategoryProductPage({
                 )}
             </div>
 
-            {/* ══════════════════════════════════════════════════════════════
-                PHẦN 2: DANH SÁCH SẢN PHẨM
-                - Thanh tìm kiếm + lọc giá + sắp xếp
-                - Grid sản phẩm:
-                    - User thường: nút "Thêm vào giỏ"
-                    - Admin: nút "Sửa" + "Xóa"
-            ══════════════════════════════════════════════════════════════ */}
             <div className="bg-white rounded-[20px] shadow-[5px_5px_15px_#173B70] p-5 sm:p-7 border border-blue-900/10">
-
-                {/* Thanh công cụ: Tìm kiếm, Lọc giá, Sắp xếp */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 mb-6 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-                    {/* Ô tìm kiếm */}
                     <div className="relative flex-1">
                         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
@@ -360,7 +285,6 @@ export default function CategoryProductPage({
                         />
                     </div>
 
-                    {/* Lọc theo khoảng giá */}
                     <div className="flex items-center gap-2">
                         <Filter size={15} className="text-[#173B70] shrink-0" />
                         <select
@@ -376,7 +300,6 @@ export default function CategoryProductPage({
                         </select>
                     </div>
 
-                    {/* Sắp xếp */}
                     <div className="flex items-center gap-2">
                         <ArrowUpDown size={15} className="text-[#173B70] shrink-0" />
                         <select
@@ -392,7 +315,6 @@ export default function CategoryProductPage({
                     </div>
                 </div>
 
-                {/* Danh sách sản phẩm */}
                 {isLoading ? (
                     <div className="py-16 text-center text-[#173B70]">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#173B70] border-t-transparent mb-2" />
@@ -414,12 +336,10 @@ export default function CategoryProductPage({
                                     key={product.id}
                                     className="bg-white rounded-[16px] border border-slate-200 p-4 pt-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative mt-3"
                                 >
-                                    {/* Nhãn giảm giá */}
                                     <span className="absolute -top-3 left-4 bg-[#d70018] text-white text-[11px] font-black px-3 py-0.5 rounded-full shadow-md z-10 border-2 border-white">
                                         {discountLabel}
                                     </span>
 
-                                    {/* Tồn kho */}
                                     <div className="flex justify-end items-center mb-1">
                                         {product.stock !== undefined && (
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
@@ -430,7 +350,6 @@ export default function CategoryProductPage({
                                         )}
                                     </div>
 
-                                    {/* Hình ảnh */}
                                     <div className="w-full h-44 sm:h-48 overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center p-2 mb-3">
                                         <img
                                             src={finalImage}
@@ -440,7 +359,6 @@ export default function CategoryProductPage({
                                         />
                                     </div>
 
-                                    {/* Tên + Đánh giá + Giá */}
                                     <div className="flex-1 flex flex-col">
                                         <h3
                                             className="font-bold text-sm text-[#173B70] line-clamp-2 min-h-[38px] group-hover:text-[#0866e8] transition-colors"
@@ -458,9 +376,7 @@ export default function CategoryProductPage({
                                         </div>
                                     </div>
 
-                                    {/* Nút hành động */}
                                     <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
-                                        {/* Nút "Thêm vào giỏ" luôn hiển thị */}
                                         <button
                                             onClick={() => handleAddToCart(product)}
                                             disabled={isOutOfStock}
@@ -474,7 +390,6 @@ export default function CategoryProductPage({
                                             {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ'}
                                         </button>
 
-                                        {/* Admin: thêm nút Sửa + Xóa bên cạnh */}
                                         {isAdmin && (
                                             <div className="flex items-center gap-1.5">
                                                 <Link
@@ -501,13 +416,9 @@ export default function CategoryProductPage({
                 )}
             </div>
 
-            {/* ══════════════════════════════════════════════════════════════
-                MODAL THÊM SẢN PHẨM MỚI (chỉ hiện khi admin click "+ Thêm SP")
-            ══════════════════════════════════════════════════════════════ */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative border-2 border-[#173B70]/20">
-                        {/* Nút đóng modal */}
                         <button
                             onClick={() => setIsAddModalOpen(false)}
                             className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 transition-colors"
@@ -520,7 +431,6 @@ export default function CategoryProductPage({
                         </h2>
 
                         <form onSubmit={handleSaveNewProduct} className="space-y-3">
-                            {/* Tên sản phẩm */}
                             <div>
                                 <label className="block text-xs font-bold text-[#173B70] mb-1">Tên sản phẩm *</label>
                                 <input
@@ -533,7 +443,6 @@ export default function CategoryProductPage({
                                 />
                             </div>
 
-                            {/* Giá + Tồn kho */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-bold text-[#173B70] mb-1">Giá bán (VNĐ) *</label>
@@ -557,7 +466,6 @@ export default function CategoryProductPage({
                                 </div>
                             </div>
 
-                            {/* URL ảnh */}
                             <div>
                                 <label className="block text-xs font-bold text-[#173B70] mb-1">Đường dẫn hình ảnh (Image URL)</label>
                                 <input
@@ -569,7 +477,6 @@ export default function CategoryProductPage({
                                 />
                             </div>
 
-                            {/* URL video */}
                             <div>
                                 <label className="block text-xs font-bold text-[#173B70] mb-1">Đường dẫn video (Video URL)</label>
                                 <input
@@ -581,7 +488,6 @@ export default function CategoryProductPage({
                                 />
                             </div>
 
-                            {/* Xem trước ảnh / video */}
                             {(newProduct.imageUrl || newProduct.videoUrl) && (
                                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
                                     <span className="block text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1">
@@ -610,32 +516,21 @@ export default function CategoryProductPage({
                                 </div>
                             )}
 
-                            {/* Footer form: link doanh thu + nút Hủy/Lưu */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-slate-100">
-                                <Link
-                                    href="/admin#daily-revenue"
+                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                                <button
+                                    type="button"
                                     onClick={() => setIsAddModalOpen(false)}
-                                    className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                                    className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200"
                                 >
-                                    <TrendingUp size={13} /> Coi doanh thu theo ngày
-                                </Link>
-
-                                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200"
-                                    >
-                                        Hủy
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSaving}
-                                        className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-[#173B70] hover:bg-[#0866e8] transition-all disabled:opacity-50"
-                                    >
-                                        {isSaving ? 'Đang lưu...' : 'Lưu sản phẩm'}
-                                    </button>
-                                </div>
+                                    Hủy
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-[#173B70] hover:bg-[#0866e8] transition-all disabled:opacity-50"
+                                >
+                                    {isSaving ? 'Đang lưu...' : 'Lưu sản phẩm'}
+                                </button>
                             </div>
                         </form>
                     </div>

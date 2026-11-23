@@ -26,7 +26,6 @@ public class UserService {
     private final JwtUtil jwtUtil;
 
     public User registerUser(UserRegisterDTO user) {
-
         Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
 
         if (existingUser.isPresent()) {
@@ -35,16 +34,14 @@ public class UserService {
 
         User newUser = new User();
         newUser.setUsername(user.getUsername());
-        // Hash
-        String hashedPassword = passwordEncoder.encode(user.getPassword());
-        newUser.setPassword(hashedPassword);
-        
+        newUser.setPassword(passwordEncoder.encode(user.getPassword()));
+
         if (user.getEmail() != null && user.getEmail().contains("@")) {
             newUser.setEmail(user.getEmail());
         } else if (user.getPhone() != null && !user.getPhone().isEmpty()) {
             newUser.setPhone(user.getPhone());
         } else {
-            // Default check if email field contains phone
+            // Hỗ trợ trường hợp client gửi SĐT qua trường email
             if (user.getEmail() != null && !user.getEmail().contains("@")) {
                 newUser.setPhone(user.getEmail());
                 newUser.setEmail(null);
@@ -52,13 +49,12 @@ public class UserService {
                 newUser.setEmail(user.getEmail());
             }
         }
-        
-        newUser.setRole("ROLE_CLIENT"); // Mặc định tài khoản mới là khách
+
+        newUser.setRole("ROLE_CLIENT");
         return userRepository.save(newUser);
     }
 
     public UserLoginDTO login(String identifier, String password) {
-
         User user = userRepository.findByEmail(identifier).orElse(null);
         if (user == null) {
             user = userRepository.findByPhone(identifier)
@@ -68,7 +64,7 @@ public class UserService {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Đăng nhập thất bại: Sai mật khẩu rồi bạn ơi!");
         }
-        
+
         String role = user.getRole();
         if (role == null || role.trim().isEmpty()) {
             role = "ROLE_CLIENT";
@@ -86,7 +82,7 @@ public class UserService {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail() != null ? user.getEmail() : user.getPhone(),
-                null, // password
+                null,
                 token);
     }
 
@@ -99,8 +95,14 @@ public class UserService {
         return user;
     }
 
-    public List<User> getAllUser() {
+    public List<User> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    /** @deprecated Sử dụng {@link #getAllUsers()} */
+    @Deprecated
+    public List<User> getAllUser() {
+        return getAllUsers();
     }
 
     public User updateUser(String email, UserUpdateDTO updateDTO) {
@@ -113,7 +115,6 @@ public class UserService {
         if (updateDTO.getPhone() != null) {
             user.setPhone(updateDTO.getPhone());
         }
-        // Cho phép cập nhật email mới (nếu có logic kiểm tra trùng thì thêm vào)
         if (updateDTO.getEmail() != null && !updateDTO.getEmail().isEmpty() && !updateDTO.getEmail().equals(user.getEmail())) {
             Optional<User> existingUser = userRepository.findByEmail(updateDTO.getEmail());
             if (existingUser.isPresent()) {

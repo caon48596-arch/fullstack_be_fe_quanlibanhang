@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -9,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.example.demo.Repository.UserRepository;
 import com.example.demo.dto.ResponseDTO;
 import com.example.demo.dto.UserDTO.OtpLoginDTO;
 import com.example.demo.dto.UserDTO.OtpRequestDTO;
@@ -18,18 +19,17 @@ import com.example.demo.dto.UserDTO.UserLoginDTO;
 import com.example.demo.dto.UserDTO.UserLogoutDTO;
 import com.example.demo.dto.UserDTO.UserRegisterDTO;
 import com.example.demo.dto.UserDTO.UserUpdateDTO;
+import com.example.demo.entity.User;
 import com.example.demo.service.EmailService;
 import com.example.demo.service.OtpService;
 import com.example.demo.service.UserService;
-import com.example.demo.entity.User;
-import com.example.demo.Repository.UserRepository;
 
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping({"/api/users", "/api"})
 public class UserController {
 
     @ExceptionHandler(RuntimeException.class)
@@ -49,17 +49,16 @@ public class UserController {
     @Autowired
     private EmailService emailService;
 
-    // Yêu cầu lấy mã xác thực OTP (Đăng ký hoặc Đăng nhập)
     @PostMapping("/request-otp")
     public ResponseEntity<ResponseDTO<String>> requestOtp(@RequestBody OtpRequestDTO otpRequest) {
-        String identifier = otpRequest.getEmail(); // Có thể là email hoặc số điện thoại
-        String type = otpRequest.getType(); // "LOGIN" hoặc "REGISTER"
+        String identifier = otpRequest.getEmail();
+        String type = otpRequest.getType();
 
         if (identifier == null || identifier.trim().isEmpty()) {
             return ResponseEntity.badRequest().body(ResponseDTO.error("Vui lòng cung cấp email hoặc số điện thoại", "400"));
         }
 
-        boolean exists = userRepository.findByEmail(identifier).isPresent() || 
+        boolean exists = userRepository.findByEmail(identifier).isPresent() ||
                          userRepository.findByPhone(identifier).isPresent();
 
         if ("REGISTER".equalsIgnoreCase(type)) {
@@ -73,18 +72,14 @@ public class UserController {
         }
 
         String otp = otpService.generateOtp(identifier);
-        
-        // Gửi OTP qua email (hoặc console nếu chưa cấu hình đúng mail host)
         emailService.sendOtpEmail(identifier, otp);
-        
+
         return ResponseEntity.ok(ResponseDTO.success("Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư."));
     }
 
-    // Đăng ký tài khoản có xác thực OTP
     @PostMapping("/register")
     public ResponseEntity<ResponseDTO<String>> register(@RequestBody UserRegisterDTO userRegisterDTO) {
         try {
-            // Xác minh OTP nếu có truyền mã OTP
             if (userRegisterDTO.getOtp() != null && !userRegisterDTO.getOtp().trim().isEmpty()) {
                 otpService.verifyOtp(userRegisterDTO.getEmail(), userRegisterDTO.getOtp());
             } else {
@@ -98,13 +93,11 @@ public class UserController {
         }
     }
 
-    // Đăng nhập bằng mã OTP
     @PostMapping("/login-otp")
     public ResponseEntity<ResponseDTO<?>> loginWithOtp(@RequestBody OtpLoginDTO loginDTO) {
         String identifier = loginDTO.getEmail();
         String password = loginDTO.getPassword();
-        
-        // Xác minh OTP trước
+
         try {
             otpService.verifyOtp(identifier, loginDTO.getOtp());
         } catch (RuntimeException e) {
@@ -119,7 +112,6 @@ public class UserController {
         }
     }
 
-    // Đăng nhập thường
     @PostMapping("/login")
     public ResponseEntity<ResponseDTO<?>> login(@RequestBody UserLoginDTO userLoginDTO) {
         try {
@@ -130,7 +122,6 @@ public class UserController {
         }
     }
 
-    // Đăng xuất
     @PostMapping("/logout")
     public ResponseEntity<ResponseDTO<String>> logout(
             @RequestBody(required = false) UserLogoutDTO userLogoutDTO,
@@ -150,13 +141,12 @@ public class UserController {
         }
     }
 
-    // Lấy thông tin người dùng
     @GetMapping("/profile")
     public ResponseEntity<ResponseDTO<?>> getProfile(
             @RequestParam(required = false) String email,
             Principal principal) {
         try {
-            // Bảo mật: Nếu có token, bắt buộc lấy từ JWT của chính user đó để tránh xem lén thông tin người khác
+            // Ưu tiên email từ JWT Principal để tránh truy cập trái phép thông tin tài khoản khác
             String targetEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
             if (targetEmail == null || targetEmail.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ResponseDTO.error("Thiếu thông tin người dùng", "400"));
@@ -178,15 +168,14 @@ public class UserController {
         }
     }
 
-    // Cập nhật thông tin
     @PutMapping("/update")
     public ResponseEntity<ResponseDTO<?>> update(
-            @RequestBody UserUpdateDTO userUpdateDTO, 
+            @RequestBody UserUpdateDTO userUpdateDTO,
             Principal principal) {
         try {
-            // Bảo mật: Ưu tiên lấy email chính chủ từ JWT Principal, ngăn chặn việc sửa trộm tài khoản người khác
-            String targetEmail = (principal != null && principal.getName() != null) 
-                    ? principal.getName() 
+            // Ưu tiên email từ JWT Principal để tránh chỉnh sửa tài khoản người khác
+            String targetEmail = (principal != null && principal.getName() != null)
+                    ? principal.getName()
                     : userUpdateDTO.getEmail();
 
             if (targetEmail == null || targetEmail.trim().isEmpty()) {

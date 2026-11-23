@@ -16,11 +16,8 @@ export async function POST(req: Request) {
         }
 
         const normalizedEmail = email.trim().toLowerCase();
-
-        // 1. Tạo mã OTP ngẫu nhiên 6 chữ số
         const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // 2. Lưu vào Storage (DynamoDB nếu có cấu hình, kèm fallback memory)
         await saveOtpToDynamoDB({
             email: normalizedEmail,
             otp: otpCode,
@@ -28,14 +25,13 @@ export async function POST(req: Request) {
             type,
         });
 
-        // 3. Gửi email OTP (qua SMTP Gmail bảo đảm gửi đến bất kỳ email nào khi deploy)
         const emailResult = await sendOtpEmail({
             to: normalizedEmail,
             otp: otpCode,
             type,
         });
 
-        // 4. Tạo signed token để hỗ trợ deploy serverless không bị mất trạng thái
+        // Signed token giúp xác thực OTP stateless khi chạy serverless
         const otpSessionToken = generateOtpSessionToken(normalizedEmail, otpCode, 300);
 
         const isDev = process.env.NODE_ENV !== 'production' || emailResult.channel === 'DEV_CONSOLE';

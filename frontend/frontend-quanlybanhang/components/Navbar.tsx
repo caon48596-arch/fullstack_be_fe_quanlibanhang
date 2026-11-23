@@ -16,16 +16,12 @@ import {
     formStyles,
 } from '@/styles/constants';
 
-/* ──────────────────────────────────────────────
- *  Helper: gộp class có điều kiện
- * ────────────────────────────────────────────── */
 const cx = (...parts: string[]) => parts.filter(Boolean).join(' ');
 
 export default function Navbar() {
     const router = useRouter();
     const pathname = usePathname();
 
-    /* ── State ── */
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const { cartItems, cartCount, cartTotal, removeFromCart, updateQuantity } = useCart();
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -41,10 +37,11 @@ export default function Navbar() {
     const isAdmin = userRole === 'ROLE_ADMIN' || userRole === 'ADMIN';
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
 
-    /* ── Đọc token khi pathname thay đổi ── */
     useEffect(() => {
         try {
-            const token = sessionStorage.getItem('accessToken');
+            const token = typeof window !== 'undefined'
+                ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
+                : null;
             setIsLoggedIn(!!token);
             if (token) {
                 setUserRole(getUserRoleFromToken());
@@ -61,14 +58,12 @@ export default function Navbar() {
         }
     }, [pathname]);
 
-    /* ── Đóng dropdown khi chuyển trang ── */
     useEffect(() => {
         setIsCartOpen(false);
         setIsAccountMenuOpen(false);
         setIsMobileMenuOpen(false);
     }, [pathname]);
 
-    /* ── Handlers ── */
     const closeAllMenus = () => {
         setIsCartOpen(false);
         setIsAccountMenuOpen(false);
@@ -78,6 +73,7 @@ export default function Navbar() {
     const handleLogout = () => {
         try {
             sessionStorage.removeItem('accessToken');
+            localStorage.removeItem('accessToken');
             setIsLoggedIn(false);
             setUserRole(null);
             setUserName(null);
@@ -138,6 +134,7 @@ export default function Navbar() {
             if (!res.ok) throw new Error(data.message || 'Lỗi cập nhật');
             alert('Cập nhật thành công!');
             setIsSettingsOpen(false);
+            // Đăng xuất để cấp lại JWT mới nếu người dùng thay đổi email đăng nhập
             if (settingsForm.email && settingsForm.email !== userName) handleLogout();
         } catch (error: any) {
             alert(error.message);
@@ -146,7 +143,6 @@ export default function Navbar() {
         }
     };
 
-    /* ── Helpers cho class điều kiện ── */
     const navPillClass = (isActive: boolean) =>
         cx(navbarStyles.navPill, isActive ? navbarStyles.navPillActive : navbarStyles.navPillDefault);
 
@@ -158,15 +154,9 @@ export default function Navbar() {
         ? (userName ? userName.split('@')[0] : 'Tài khoản')
         : 'Tài khoản';
 
-    /* ════════════════════════════════════════════
-     *  RENDER
-     * ════════════════════════════════════════════ */
     return (
         <header className={navbarStyles.header}>
-            {/* ── Thanh chính ── */}
             <div className={navbarStyles.bar}>
-
-                {/* ── Trái: Logo + Admin Nav ── */}
                 <div className={navbarStyles.leftGroup}>
                     <Link href="/" title="Về trang chủ IPWORLD" className={navbarStyles.logoLink}>
                         <img
@@ -188,17 +178,13 @@ export default function Navbar() {
                             <Link href="/products/create" className={navPillClass(pathname === '/products/create')}>
                                 + Thêm SP
                             </Link>
-                            <Link href="/admin#daily-revenue" className={navPillClass(pathname === '/admin' && typeof window !== 'undefined' && window.location.hash === '#daily-revenue')}>
-                                📊 Doanh thu theo ngày
-                            </Link>
-                            <Link href="/admin" className={navPillClass(pathname === '/admin' && (typeof window === 'undefined' || window.location.hash !== '#daily-revenue'))}>
+                            <Link href="/admin" className={navPillClass(pathname === '/admin')}>
                                 Quản trị Admin
                             </Link>
                         </nav>
                     )}
                 </div>
 
-                {/* ── Giữa: Tìm kiếm (desktop) ── */}
                 <form onSubmit={handleSearchSubmit} className={navbarStyles.searchForm}>
                     <input
                         type="text"
@@ -212,10 +198,7 @@ export default function Navbar() {
                     </button>
                 </form>
 
-                {/* ── Phải: Cart + Account + Hamburger ── */}
                 <div className={navbarStyles.rightGroup}>
-
-                    {/* Giỏ hàng (ẩn với Admin) */}
                     {!isAdmin && (
                         <div className="relative">
                             <button
@@ -229,10 +212,8 @@ export default function Navbar() {
                                 )}
                             </button>
 
-                            {/* Popup giỏ hàng */}
                             {isCartOpen && (
                                 <div className={navbarStyles.cartPopup}>
-                                    {/* Header */}
                                     <div className="p-4 bg-[#173B70] text-white flex justify-between items-center">
                                         <h3 className="font-bold text-base flex items-center gap-2">
                                             <ShoppingCart size={18} /> Giỏ Hàng Của Bạn
@@ -242,7 +223,6 @@ export default function Navbar() {
                                         </span>
                                     </div>
 
-                                    {/* Danh sách sản phẩm */}
                                     <div className="max-h-72 overflow-y-auto p-3 divide-y divide-slate-100">
                                         {cartItems.length === 0 ? (
                                             <div className="text-center text-slate-500 py-10 text-sm">
@@ -258,7 +238,6 @@ export default function Navbar() {
                                         ) : (
                                             cartItems.map((item) => (
                                                 <div key={item.id} className="flex items-center gap-3 py-3 first:pt-1 last:pb-1">
-                                                    {/* Thumbnail */}
                                                     <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0 p-1 flex items-center justify-center">
                                                         {item.imageUrl ? (
                                                             <img
@@ -272,7 +251,6 @@ export default function Navbar() {
                                                         )}
                                                     </div>
 
-                                                    {/* Thông tin sản phẩm */}
                                                     <div className="flex-1 min-w-0 pr-1">
                                                         <p className="text-xs sm:text-sm font-bold text-slate-800 truncate" title={item.name}>
                                                             {item.name}
@@ -281,7 +259,6 @@ export default function Navbar() {
                                                             {new Intl.NumberFormat('vi-VN').format(item.price)}đ
                                                         </p>
 
-                                                        {/* Bộ đếm số lượng */}
                                                         <div className="flex items-center bg-slate-100 rounded-full border border-slate-200 w-fit">
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, item.quantity - 1); }}
@@ -302,7 +279,6 @@ export default function Navbar() {
                                                         </div>
                                                     </div>
 
-                                                    {/* Nút xóa */}
                                                     <button
                                                         onClick={() => removeFromCart(item.id)}
                                                         className="text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full p-1.5 transition-all"
@@ -315,7 +291,6 @@ export default function Navbar() {
                                         )}
                                     </div>
 
-                                    {/* Footer: tổng tiền + nút đặt hàng */}
                                     {cartItems.length > 0 && (
                                         <div className="p-4 border-t border-slate-100 bg-slate-50">
                                             <div className="flex justify-between items-center mb-3">
@@ -338,7 +313,6 @@ export default function Navbar() {
                         </div>
                     )}
 
-                    {/* Tài khoản */}
                     <div className="relative group">
                         <button
                             onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
@@ -349,12 +323,9 @@ export default function Navbar() {
                             <span className="max-w-20 sm:max-w-28 truncate">{displayName}</span>
                         </button>
 
-                        {/* Dropdown tài khoản */}
                         <div className={cx(navbarStyles.accountDropdown, accountDropdownVisibility)}>
                             {isLoggedIn ? (
                                 <>
-
-                                    {/* Thông tin user */}
                                     <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/80 rounded-t-2xl">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tài khoản</p>
                                         <p className="text-xs font-bold text-[#173B70] truncate mt-0.5">{userName}</p>
@@ -363,7 +334,6 @@ export default function Navbar() {
                                         </span>
                                     </div>
 
-                                    {/* Menu items */}
                                     <div className="py-1">
                                         <Link
                                             href="/my-orders"
@@ -389,7 +359,6 @@ export default function Navbar() {
                                 </>
                             ) : (
                                 <>
-                                    {/* Guest header */}
                                     <div className="px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
                                         <p className="text-xs font-extrabold text-[#173B70] flex items-center gap-1.5">
                                             <User size={15} /> Mục Tài Khoản
@@ -399,7 +368,6 @@ export default function Navbar() {
                                         </p>
                                     </div>
 
-                                    {/* Guest actions */}
                                     <div className="p-3 space-y-2">
                                         <Link
                                             href="/login"
@@ -421,7 +389,6 @@ export default function Navbar() {
                         </div>
                     </div>
 
-                    {/* Hamburger mobile */}
                     <button
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                         className={navbarStyles.hamburger}
@@ -432,7 +399,6 @@ export default function Navbar() {
                 </div>
             </div>
 
-            {/* ── Panel mobile ── */}
             {isMobileMenuOpen && (
                 <div className={navbarStyles.mobilePanel}>
                     <form
@@ -451,7 +417,6 @@ export default function Navbar() {
                         </button>
                     </form>
 
-                    {/* Danh mục trên mobile */}
                     <div className="grid grid-cols-2 gap-2 pb-3 mb-3 border-b border-slate-200 text-xs font-bold text-[#173B70]">
                         <Link href="/pc" onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 flex items-center gap-1.5">
                             🖥️ PC
@@ -478,9 +443,6 @@ export default function Navbar() {
                             <Link href="/products/create" onClick={() => setIsMobileMenuOpen(false)} className="px-3 py-2 rounded-xl hover:bg-blue-50 transition-colors">
                                 ➕ Thêm sản phẩm mới
                             </Link>
-                            <Link href="/admin#daily-revenue" onClick={() => setIsMobileMenuOpen(false)} className="px-3 py-2 rounded-xl hover:bg-blue-50 transition-colors">
-                                📊 Doanh thu chi tiết theo ngày
-                            </Link>
                             <Link href="/admin" onClick={() => setIsMobileMenuOpen(false)} className="px-3 py-2 rounded-xl hover:bg-blue-50 transition-colors">
                                 🛡️ Quản trị Admin
                             </Link>
@@ -489,12 +451,10 @@ export default function Navbar() {
                 </div>
             )}
 
-            {/* ── Overlay đóng popup khi bấm ngoài ── */}
             {(isCartOpen || isAccountMenuOpen || isMobileMenuOpen) && (
                 <div className={navbarStyles.overlay} onClick={closeAllMenus} />
             )}
 
-            {/* ── Modal Cài đặt ── */}
             {isSettingsOpen && (
                 <div className={modalStyles.backdrop}>
                     <div className={modalStyles.card}>

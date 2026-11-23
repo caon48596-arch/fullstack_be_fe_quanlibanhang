@@ -11,17 +11,14 @@ export default function ClientLayout({
       className="min-h-screen flex flex-col bg-cover bg-center bg-no-repeat bg-fixed selection:bg-blue-600 selection:text-white"
       style={{ backgroundImage: "url('/HINH_TRANG_CHU/galaxy.jpg')" }}
     >
-      {/* Thanh navbar chạy theo lúc cuộn chuột (sticky top) */}
       <div className="sticky top-0 z-50 pt-3 pb-2 px-2 sm:px-4">
         <Navbar />
       </div>
 
-      {/* Nội dung chính */}
       <main className="flex-grow flex flex-col px-2 sm:px-4 py-4 max-w-[1440px] mx-auto w-full">
         {children}
       </main>
 
-      {/* Chân trang */}
       <Footer />
     </div>
   );

@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { fetchClient, getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
+import { getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import { productService, Product } from '@/util/productService';
-import { ShoppingCart, Edit2, Trash2, Plus, Sparkles, TrendingUp } from 'lucide-react';
+import { ShoppingCart, Edit2, Trash2, Plus } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 export default function ProductsPage() {
@@ -47,6 +47,11 @@ export default function ProductsPage() {
     };
 
     const handleDelete = async (id: number, name: string) => {
+        const role = getUserRoleFromToken();
+        if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
+            alert("Cấm tuyệt đối: Chỉ có Quản trị viên (Admin) mới có quyền xóa sản phẩm!");
+            return;
+        }
         if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${name}" khỏi toàn bộ hệ thống không?`)) {
             try {
                 await productService.deleteProduct(id, name);
@@ -60,12 +65,6 @@ export default function ProductsPage() {
     };
 
     const handleAddToCart = (product: Product) => {
-        const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-        if (!token) {
-            alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
-            return;
-        }
-
         const rawImageUrl = product.imageUrl && product.imageUrl.trim() !== '' 
             ? product.imageUrl 
             : (product.image_url || product.image || product.img || '/HINH_TRANG_CHU/logo2.jpg');
@@ -77,6 +76,7 @@ export default function ProductsPage() {
             quantity: 1,
             imageUrl: getValidMediaUrl(rawImageUrl)
         });
+        alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
     };
 
     const isAdmin = userRole === 'ROLE_ADMIN' || userRole === 'ADMIN';
@@ -101,7 +101,6 @@ export default function ProductsPage() {
 
     return (
         <div className="w-full flex flex-col gap-6">
-            {/* Header thanh danh mục */}
             <div className="bg-white rounded-[20px] shadow-[5px_5px_15px_#173B70] px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 border border-blue-900/10">
                 <div className="flex items-center gap-3">
                     <span className="w-3 h-8 bg-[#173B70] rounded-full inline-block"></span>
@@ -116,12 +115,6 @@ export default function ProductsPage() {
                 {isAdmin && (
                     <div className="flex items-center gap-2">
                         <Link
-                            href="/admin#daily-revenue"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-full font-bold text-xs transition-all shadow-md flex items-center gap-1.5 whitespace-nowrap"
-                        >
-                            <TrendingUp size={15} /> Coi Doanh Thu Theo Ngày
-                        </Link>
-                        <Link
                             href="/products/create"
                             className="bg-[#173B70] hover:bg-[#0866e8] text-white px-4 py-2 rounded-full font-bold text-xs transition-all shadow-md flex items-center gap-1.5 whitespace-nowrap"
                         >
@@ -131,7 +124,6 @@ export default function ProductsPage() {
                 )}
             </div>
 
-            {/* Grid sản phẩm chuẩn style IPWORLD */}
             <div className="bg-[#173B70] rounded-[20px] shadow-[5px_5px_15px_#173B70] p-6 border border-blue-900/30">
                 {products.length === 0 ? (
                     <div className="bg-white rounded-[16px] py-16 text-center text-slate-600">

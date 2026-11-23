@@ -25,7 +25,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-    // Khởi tạo giỏ hàng từ localStorage nếu có
     useEffect(() => {
         try {
             const savedCart = localStorage.getItem('cart');
@@ -37,7 +36,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
-    // Lưu giỏ hàng mỗi khi có thay đổi
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cartItems));
     }, [cartItems]);

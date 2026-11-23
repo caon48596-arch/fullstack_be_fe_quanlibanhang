@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * TRANG CHỦ (HomePage)
- *
- * Hiển thị:
- * - Danh mục điều hướng bên trái + video giới thiệu bên phải
- * - Section "Sản Phẩm Nổi Bật" (4 sản phẩm đầu) → chỉ cho phép thêm vào giỏ, không có CRUD
- * - Section "Tất Cả Sản Phẩm" (có bộ lọc danh mục, hiển thị tổng số):
- *     - Nếu là khách/user → nút "Thêm vào giỏ"
- *     - Nếu là admin → nút "Sửa" + "Xóa" (CRUD)
- */
-
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
@@ -24,26 +13,18 @@ import {
     Trash2,
     Edit2,
     Sparkles,
-    TrendingUp,
     Plus,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { fetchClient, getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import { productService, Product } from '@/util/productService';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
 interface Category {
     id: number;
     name: string;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Danh mục mặc định dùng khi API /categories chưa trả về dữ liệu */
+// Danh mục dự phòng khi API /categories chưa trả về dữ liệu
 const DEFAULT_CATEGORIES: Category[] = [
     { id: 1, name: 'Điện thoại' },
     { id: 2, name: 'Máy tính bảng' },
@@ -54,30 +35,19 @@ const DEFAULT_CATEGORIES: Category[] = [
     { id: 7, name: 'Màn hình' },
 ];
 
-/** Hình ảnh mặc định dự phòng khi sản phẩm chưa có ảnh */
 const DEFAULT_PRODUCT_IMAGE = '/HINH_TRANG_CHU/logo2.jpg';
 
-/** Các nhãn giảm giá hiển thị xoay vòng */
 const DISCOUNT_LABELS = ['Giảm 35%', 'Giảm 22%', 'Giảm 37%', 'Giảm 29%', 'Giảm 18%', 'Giảm 15%'];
 
-/** Danh mục hiển thị ở sidebar trái (điều hướng sang trang danh mục riêng) */
 const NAV_CATEGORIES = [
-    { name: 'Điện Thoại',    href: '/dien-thoai',    icon: '/HINH_TRANG_CHU/dienthoai.jpg',    fallbackIcon: <Smartphone size={18} /> },
-    { name: 'Laptop',        href: '/laptop',         icon: '/HINH_TRANG_CHU/laptop.jog.png',   fallbackIcon: <Laptop size={18} /> },
-    { name: 'PC',            href: '/pc',             icon: '/HINH_TRANG_CHU/pc.jpg',           fallbackIcon: <Cpu size={18} /> },
-    { name: 'Màn Hình',      href: '/man-hinh',       icon: '/HINH_TRANG_CHU/manhinh.png',      fallbackIcon: <Monitor size={18} /> },
-    { name: 'Máy Tính Bảng', href: '/may-tinh-bang',  icon: '/HINH_TRANG_CHU/maytinhbang.jpg',  fallbackIcon: <Tablet size={18} /> },
-    { name: 'Phụ Kiện',      href: '/phu-kien',       icon: '/HINH_TRANG_CHU/phukien.jpg',      fallbackIcon: <Headphones size={18} /> },
+    { name: 'Điện Thoại', href: '/dien-thoai', icon: '/HINH_TRANG_CHU/dienthoai.jpg', fallbackIcon: <Smartphone size={18} /> },
+    { name: 'Laptop', href: '/laptop', icon: '/HINH_TRANG_CHU/laptop.jog.png', fallbackIcon: <Laptop size={18} /> },
+    { name: 'PC', href: '/pc', icon: '/HINH_TRANG_CHU/pc.jpg', fallbackIcon: <Cpu size={18} /> },
+    { name: 'Màn Hình', href: '/man-hinh', icon: '/HINH_TRANG_CHU/manhinh.png', fallbackIcon: <Monitor size={18} /> },
+    { name: 'Máy Tính Bảng', href: '/may-tinh-bang', icon: '/HINH_TRANG_CHU/maytinhbang.jpg', fallbackIcon: <Tablet size={18} /> },
+    { name: 'Phụ Kiện', href: '/phu-kien', icon: '/HINH_TRANG_CHU/phukien.jpg', fallbackIcon: <Headphones size={18} /> },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER FUNCTIONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Lấy URL ảnh của sản phẩm.
- * Thử theo thứ tự: imageUrl → image_url → image → img → fallback theo id
- */
 function getProductImageUrl(product: Product): string {
     return (
         (product.imageUrl?.trim() !== '' ? product.imageUrl : null) ||
@@ -88,12 +58,7 @@ function getProductImageUrl(product: Product): string {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
-
 export default function HomePage() {
-    // ── State ──────────────────────────────────────────────────────────────
     const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
     const [selectedCategoryId, setSelectedCategoryId] = useState<number | 'all'>('all');
@@ -103,17 +68,12 @@ export default function HomePage() {
 
     const { addToCart } = useCart();
 
-    // Kiểm tra quyền admin từ token
     const isAdmin = userRole === 'ROLE_ADMIN' || userRole === 'ADMIN';
 
-    // ── Effects ────────────────────────────────────────────────────────────
-
-    // Đọc role của user từ JWT token khi trang load
     useEffect(() => {
         setUserRole(getUserRoleFromToken());
     }, []);
 
-    // Tải danh mục từ API (nếu lỗi thì dùng DEFAULT_CATEGORIES)
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -128,19 +88,16 @@ export default function HomePage() {
         fetchCategories();
     }, []);
 
-    // Tải toàn bộ sản phẩm và lắng nghe thay đổi (thêm/sửa/xóa)
     useEffect(() => {
         loadProducts();
 
-        // Subscribe để tự reload khi có sản phẩm bị thêm/sửa/xóa từ trang khác
+        // Đồng bộ lại danh sách khi sản phẩm bị thêm/sửa/xóa từ trang khác
         const unsubscribe = productService.subscribe(loadProducts);
 
         return () => {
-            unsubscribe(); // Dọn dẹp listener khi component unmount
+            unsubscribe();
         };
     }, []);
-
-    // ── Data Fetching ──────────────────────────────────────────────────────
 
     const loadProducts = async () => {
         setIsLoading(true);
@@ -156,27 +113,19 @@ export default function HomePage() {
         }
     };
 
-    // ── Derived Data ───────────────────────────────────────────────────────
-
-    /**
-     * Kiểm tra xem sản phẩm có thuộc danh mục đang chọn không.
-     * Ưu tiên khớp theo id, sau đó tên, cuối cùng là từ khóa trong tên sản phẩm.
-     */
+    // Ưu tiên khớp theo category.id, tên danh mục, cuối cùng là từ khóa tên/mô tả sản phẩm
     const matchCategory = (product: Product, targetCategoryId: number): boolean => {
-        // Khớp chính xác theo id
         if (product.category?.id === targetCategoryId) return true;
 
         const targetCategory = categories.find(c => c.id === targetCategoryId);
         const targetName = (targetCategory?.name || '').toLowerCase().trim();
         const productCategoryName = (product.category?.name || '').toLowerCase().trim();
 
-        // Khớp theo tên danh mục
         if (productCategoryName && (
             productCategoryName.includes(targetName) ||
             targetName.includes(productCategoryName)
         )) return true;
 
-        // Dự phòng: khớp theo từ khóa trong tên/mô tả sản phẩm
         const productName = (product.name || '').toLowerCase();
         const productDesc = (product.description || '').toLowerCase();
 
@@ -202,23 +151,17 @@ export default function HomePage() {
         return false;
     };
 
-    /** 4 sản phẩm đầu tiên — hiển thị ở section "Sản Phẩm Nổi Bật" */
     const featuredProducts = useMemo(() => allProducts.slice(0, 4), [allProducts]);
 
-    /** Sản phẩm đã lọc theo danh mục đang chọn — hiển thị ở section "Tất Cả Sản Phẩm" */
     const displayedProducts = useMemo(() => {
         if (selectedCategoryId === 'all') return allProducts;
         return allProducts.filter(p => matchCategory(p, selectedCategoryId));
     }, [allProducts, selectedCategoryId, categories]);
 
-    /** Tên danh mục đang được chọn (dùng để hiển thị badge filter) */
     const selectedCategoryName = selectedCategoryId === 'all'
         ? null
         : categories.find(c => c.id === selectedCategoryId)?.name || 'Danh mục';
 
-    // ── Handlers ───────────────────────────────────────────────────────────
-
-    /** Thêm sản phẩm vào giỏ hàng */
     const handleAddToCart = (product: Product) => {
         addToCart({
             id: product.id,
@@ -230,8 +173,12 @@ export default function HomePage() {
         alert(`Đã thêm "${product.name}" vào giỏ hàng!`);
     };
 
-    /** Xóa sản phẩm khỏi hệ thống (chỉ admin) */
     const handleDeleteProduct = async (id: number, name: string) => {
+        const role = getUserRoleFromToken();
+        if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
+            alert("Cấm tuyệt đối: Chỉ có Quản trị viên (Admin) mới có quyền xóa sản phẩm!");
+            return;
+        }
         if (!confirm(`Bạn có chắc muốn xóa sản phẩm "${name}" khỏi toàn bộ hệ thống?`)) return;
         try {
             await productService.deleteProduct(id, name);
@@ -243,17 +190,9 @@ export default function HomePage() {
         }
     };
 
-    // ── Render ─────────────────────────────────────────────────────────────
-
     return (
         <div className="w-full flex flex-col gap-8">
-
-            {/* ══════════════════════════════════════════════════════════════
-                SECTION 1: HERO — Danh mục bên trái + Video bên phải
-            ══════════════════════════════════════════════════════════════ */}
             <section className="w-full flex flex-col lg:flex-row gap-6 items-stretch justify-center">
-
-                {/* Sidebar danh mục điều hướng */}
                 <div className="w-full lg:w-64 xl:w-72 shrink-0 bg-white rounded-[20px] shadow-[4px_4px_15px_rgba(23,59,112,0.15)] p-4 flex flex-col border-2 border-[#173B70]/20">
                     <div className="flex items-center pb-3 mb-3 border-b-2 border-[#173B70]">
                         <h2 className="text-sm font-black text-[#173B70] tracking-wide flex items-center gap-2 whitespace-nowrap">
@@ -285,7 +224,6 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                {/* Video giới thiệu */}
                 <div className="flex-1 bg-white rounded-[20px] shadow-[4px_4px_15px_rgba(23,59,112,0.15)] p-3 sm:p-4 flex flex-col justify-center border-4 border-[#173B70] overflow-hidden">
                     <div className="w-full relative rounded-[14px] overflow-hidden bg-black flex items-center justify-center max-h-[320px]">
                         <video
@@ -302,15 +240,8 @@ export default function HomePage() {
                 </div>
             </section>
 
-            {/* ══════════════════════════════════════════════════════════════
-                SECTION 2: SẢN PHẨM NỔI BẬT
-                ► Hiển thị 4 sản phẩm đầu tiên
-                ► Mọi người dùng (kể cả admin) chỉ thấy nút "Thêm vào giỏ"
-                ► Admin có thể dùng nút "Thêm Sản Phẩm Mới" ở header section này
-            ══════════════════════════════════════════════════════════════ */}
             {featuredProducts.length > 0 && (
                 <section className="w-full bg-[#173B70] rounded-[20px] shadow-[5px_5px_15px_rgba(23,59,112,0.2)] p-6 sm:p-8 border border-blue-900/40">
-                    {/* Header section */}
                     <div className="flex items-center justify-between pb-3 mb-6 border-b border-white/20">
                         <div className="flex items-center gap-3">
                             <span className="w-3 h-8 bg-amber-400 rounded-full inline-block" />
@@ -319,7 +250,6 @@ export default function HomePage() {
                             </h2>
                         </div>
 
-                        {/* Admin: nút thêm sản phẩm mới (chuyển đến trang tạo sản phẩm) */}
                         {isAdmin && (
                             <Link
                                 href="/products/create"
@@ -330,7 +260,6 @@ export default function HomePage() {
                         )}
                     </div>
 
-                    {/* Lưới sản phẩm nổi bật */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-2">
                         {featuredProducts.map((product) => (
                             <ProductCard
@@ -346,46 +275,28 @@ export default function HomePage() {
                 </section>
             )}
 
-            {/* ══════════════════════════════════════════════════════════════
-                SECTION 3: TẤT CẢ SẢN PHẨM
-                ► Có bộ lọc theo danh mục + hiển thị tổng số lượng
-                ► Nếu là user thường → nút "Thêm vào giỏ"
-                ► Nếu là admin → nút "Sửa" + "Xóa" (CRUD đầy đủ)
-            ══════════════════════════════════════════════════════════════ */}
             <section className="w-full bg-white rounded-[20px] shadow-[5px_5px_15px_rgba(23,59,112,0.12)] p-5 sm:p-7 border border-blue-900/10">
-                {/* Header: tiêu đề + badge lọc + nút admin */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 mb-6 border-b-2 border-[#173B70]">
-                    {/* Tiêu đề + badge tổng/lọc */}
                     <div className="flex items-center gap-3">
                         <span className="w-3 h-8 bg-[#0866e8] rounded-full inline-block" />
                         <div className="flex flex-wrap items-center gap-2.5">
                             <h2 className="text-xl sm:text-2xl font-black text-[#173B70] tracking-wide">
                                 Tất Cả Sản Phẩm
                             </h2>
-                            {/* Badge danh mục đang xem */}
                             {selectedCategoryName && (
                                 <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                                    Đang xem: {selectedCategoryName} ({displayedProducts.length})
+                                    {selectedCategoryName} ({displayedProducts.length})
                                 </span>
                             )}
-                            {/* Badge tổng toàn bộ sản phẩm */}
                             <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-[#173B70] border border-blue-200">
                                 Tổng cộng: {allProducts.length} sản phẩm
                             </span>
                         </div>
                     </div>
 
-                    {/* Thanh công cụ bên phải: nút admin + bộ lọc danh mục */}
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* Admin: nút xem doanh thu + thêm sản phẩm */}
                         {isAdmin && (
                             <div className="flex items-center gap-2 mr-2">
-                                <Link
-                                    href="/admin#daily-revenue"
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-full font-bold text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"
-                                >
-                                    <TrendingUp size={14} /> Coi Doanh Thu Theo Ngày
-                                </Link>
                                 <Link
                                     href="/products/create"
                                     className="bg-[#173B70] hover:bg-[#0866e8] text-white px-3.5 py-1.5 rounded-full font-bold text-xs transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap"
@@ -395,32 +306,27 @@ export default function HomePage() {
                             </div>
                         )}
 
-                        {/* Bộ lọc nhanh theo danh mục */}
                         <div className="flex items-center gap-1.5 flex-wrap">
-                            {/* Nút "Tất cả" luôn hiển thị tổng allProducts */}
                             <button
                                 onClick={() => setSelectedCategoryId('all')}
-                                className={`text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
-                                    selectedCategoryId === 'all'
-                                        ? 'bg-[#173B70] text-white shadow-sm'
-                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                }`}
+                                className={`text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${selectedCategoryId === 'all'
+                                    ? 'bg-[#173B70] text-white shadow-sm'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                    }`}
                             >
                                 Tất cả ({allProducts.length})
                             </button>
 
-                            {/* Nút từng danh mục kèm số lượng */}
                             {categories.map((category) => {
                                 const count = allProducts.filter(p => matchCategory(p, category.id)).length;
                                 return (
                                     <button
                                         key={category.id}
                                         onClick={() => setSelectedCategoryId(category.id)}
-                                        className={`text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${
-                                            selectedCategoryId === category.id
-                                                ? 'bg-[#0866e8] text-white shadow-sm'
-                                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                        }`}
+                                        className={`text-xs font-bold px-3.5 py-1.5 rounded-full transition-all ${selectedCategoryId === category.id
+                                            ? 'bg-[#0866e8] text-white shadow-sm'
+                                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                            }`}
                                     >
                                         {category.name} ({count})
                                     </button>
@@ -430,7 +336,6 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                {/* Nội dung: loading / error / danh sách sản phẩm */}
                 {isLoading ? (
                     <LoadingSpinner message="Đang tải toàn bộ sản phẩm từ hệ thống..." />
                 ) : error && allProducts.length === 0 ? (
@@ -456,20 +361,6 @@ export default function HomePage() {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SUB-COMPONENTS (tách ra để code trang chính gọn hơn)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * ProductCard — Card sản phẩm tái sử dụng được.
- *
- * Props:
- * - product: thông tin sản phẩm
- * - discountLabel: nhãn giảm giá hiển thị góc trên trái
- * - showAdminActions: true → hiện nút Sửa/Xóa thay nút Thêm vào giỏ
- * - onAddToCart: callback khi click "Thêm vào giỏ"
- * - onDelete: callback khi click "Xóa"
- */
 interface ProductCardProps {
     product: Product;
     discountLabel: string;
@@ -484,27 +375,22 @@ function ProductCard({ product, discountLabel, showAdminActions, onAddToCart, on
 
     return (
         <div className="bg-white rounded-[16px] border border-slate-200 p-4 pt-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group relative mt-3">
-
-            {/* Nhãn giảm giá (góc trên trái) */}
             <span className="absolute -top-3 left-4 bg-[#d70018] text-white text-[11px] font-black px-3 py-0.5 rounded-full shadow-md z-10 border-2 border-white">
                 {discountLabel}
             </span>
 
-            {/* Danh mục + Tồn kho (hàng trên) */}
             <div className="flex justify-between items-center mb-1">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-[#173B70] truncate max-w-[120px]">
                     {product.category?.name || 'Công nghệ'}
                 </span>
                 {product.stock !== undefined && (
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                        isOutOfStock ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
-                    }`}>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${isOutOfStock ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
+                        }`}>
                         {isOutOfStock ? 'Hết hàng' : `Còn ${product.stock}`}
                     </span>
                 )}
             </div>
 
-            {/* Hình ảnh sản phẩm */}
             <div className="w-full h-44 sm:h-48 overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center p-2 mb-3">
                 <img
                     src={imageUrl}
@@ -514,7 +400,6 @@ function ProductCard({ product, discountLabel, showAdminActions, onAddToCart, on
                 />
             </div>
 
-            {/* Tên sản phẩm + Đánh giá + Giá */}
             <div className="flex-1 flex flex-col">
                 <h3
                     className="font-bold text-xs sm:text-sm text-[#173B70] line-clamp-2 min-h-[36px] group-hover:text-[#0866e8] transition-colors"
@@ -534,10 +419,8 @@ function ProductCard({ product, discountLabel, showAdminActions, onAddToCart, on
                 </div>
             </div>
 
-            {/* Nút hành động */}
             <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
                 {showAdminActions ? (
-                    /* Admin: Sửa + Xóa */
                     <div className="w-full flex gap-2">
                         <Link
                             href={`/products/edit/${product.id}`}
@@ -554,15 +437,13 @@ function ProductCard({ product, discountLabel, showAdminActions, onAddToCart, on
                         </button>
                     </div>
                 ) : (
-                    /* User thường: Thêm vào giỏ */
                     <button
                         onClick={() => onAddToCart(product)}
                         disabled={isOutOfStock}
-                        className={`w-full py-2.5 rounded-[8px] font-bold text-xs sm:text-sm text-white flex items-center justify-center gap-2 transition-all shadow-sm ${
-                            isOutOfStock
-                                ? 'bg-slate-300 cursor-not-allowed'
-                                : 'bg-[#0866e8] hover:bg-[#173B70] active:scale-95'
-                        }`}
+                        className={`w-full py-2.5 rounded-[8px] font-bold text-xs sm:text-sm text-white flex items-center justify-center gap-2 transition-all shadow-sm ${isOutOfStock
+                            ? 'bg-slate-300 cursor-not-allowed'
+                            : 'bg-[#0866e8] hover:bg-[#173B70] active:scale-95'
+                            }`}
                     >
                         <ShoppingCart size={16} />
                         {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ'}
@@ -573,7 +454,6 @@ function ProductCard({ product, discountLabel, showAdminActions, onAddToCart, on
     );
 }
 
-/** Spinner loading đơn giản */
 function LoadingSpinner({ message }: { message: string }) {
     return (
         <div className="py-20 text-center text-[#173B70]">
@@ -583,7 +463,6 @@ function LoadingSpinner({ message }: { message: string }) {
     );
 }
 
-/** Thông báo lỗi */
 function ErrorMessage({ message }: { message: string }) {
     return (
         <div className="bg-red-50 text-red-700 p-6 rounded-2xl text-center border border-red-200">
@@ -593,7 +472,6 @@ function ErrorMessage({ message }: { message: string }) {
     );
 }
 
-/** Trạng thái rỗng (không có sản phẩm trong danh mục đang chọn) */
 function EmptyState() {
     return (
         <div className="bg-slate-50 rounded-2xl p-12 text-center text-slate-600 border border-slate-200">

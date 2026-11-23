@@ -19,7 +19,6 @@ function VerifyOtpContent() {
     const action = searchParams.get('action') || 'login';
     const redirectUrl = searchParams.get('redirect');
 
-    /* ── State ── */
     const [identifier, setIdentifier]           = useState('');
     const [otp, setOtp]                         = useState('');
     const [isLoading, setIsLoading]             = useState(false);
@@ -35,7 +34,6 @@ function VerifyOtpContent() {
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
     const isRegister = action === 'register';
 
-    /* ── Lấy dữ liệu tạm từ sessionStorage ── */
     useEffect(() => {
         try {
             const stored = sessionStorage.getItem('pendingAuthData');
@@ -55,7 +53,6 @@ function VerifyOtpContent() {
         }
     }, [router]);
 
-    /* ── Đếm ngược gửi lại OTP ── */
     useEffect(() => {
         if (cooldown > 0) {
             const timer = setTimeout(() => setCooldown((prev) => prev - 1), 1000);
@@ -63,7 +60,6 @@ function VerifyOtpContent() {
         }
     }, [cooldown]);
 
-    /* ── Gửi lại mã OTP ── */
     const handleRequestOtp = async () => {
         if (!identifier) {
             setError('Không tìm thấy thông tin email.');
@@ -122,7 +118,6 @@ function VerifyOtpContent() {
         }
     };
 
-    /* ── Xác thực OTP ── */
     const handleVerify = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!otp.trim()) {
@@ -229,8 +224,6 @@ function VerifyOtpContent() {
     return (
         <div className={authLayoutStyles.page}>
             <div className={authLayoutStyles.container}>
-
-                {/* Logo bên trái */}
                 <div className={authLayoutStyles.logoWrapper}>
                     <img
                         src="/HINH_TRANG_CHU/logo_dang nhap.png"
@@ -243,7 +236,6 @@ function VerifyOtpContent() {
                     </h2>
                 </div>
 
-                {/* Form xác thực OTP */}
                 <div className={authLayoutStyles.card}>
                     <div className="flex items-center justify-center gap-2 mb-2">
                         <ShieldCheck size={28} className="text-[#173B70]" />
@@ -260,7 +252,6 @@ function VerifyOtpContent() {
                     {successMessage && <div className={alertStyles.success}>{successMessage}</div>}
 
                     <form onSubmit={handleVerify} className="space-y-4" autoComplete="off">
-                        {/* Email (chỉ đọc) */}
                         <div>
                             <label className={formStyles.labelWithIcon}>
                                 <Mail size={14} /> Email nhận mã xác thực
@@ -273,7 +264,6 @@ function VerifyOtpContent() {
                             />
                         </div>
 
-                        {/* Ô nhập OTP + nút gửi lại */}
                         <div>
                             <label className={formStyles.labelWithIcon}>
                                 <KeyRound size={14} /> Mã xác thực OTP
@@ -299,7 +289,6 @@ function VerifyOtpContent() {
                             </div>
                         </div>
 
-                        {/* Nút xác thực */}
                         <button
                             type="submit"
                             disabled={isLoading}
@@ -308,7 +297,6 @@ function VerifyOtpContent() {
                             {isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC THỰC & HOÀN TẤT'}
                         </button>
 
-                        {/* Footer links */}
                         <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                             <Link
                                 href={isRegister ? '/register' : '/login'}

@@ -19,7 +19,6 @@ public class HealthCheckController {
     public ResponseEntity<Map<String, Object>> checkHealth() {
         log.info("System health check API was called.");
 
-        // Sử dụng Map để trả về cấu trúc JSON động, chuẩn xác
         Map<String, Object> response = new HashMap<>();
         response.put("status", "UP");
         response.put("timestamp", LocalDateTime.now());

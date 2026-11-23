@@ -15,7 +15,6 @@ export default function AdminLayout({
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Kiểm tra quyền Admin từ Token JWT
     const token = typeof window !== 'undefined'
       ? (sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken'))
       : null;
@@ -24,7 +23,7 @@ export default function AdminLayout({
       setIsAuthorized(true);
     } else {
       setIsAuthorized(false);
-      // Chuyển hướng sau 1.5 giây: nếu chưa đăng nhập -> /login, nếu đã là người dùng thường -> / (không đá ra login)
+      // Chưa đăng nhập -> /login; người dùng thường -> / (không ép đăng nhập lại)
       const timer = setTimeout(() => {
         if (!token) {
           router.push('/login?redirect=/admin');
@@ -36,7 +35,6 @@ export default function AdminLayout({
     }
   }, [router]);
 
-  // Trạng thái đang kiểm tra phiên đăng nhập
   if (isAuthorized === null) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white">
@@ -46,7 +44,6 @@ export default function AdminLayout({
     );
   }
 
-  // Không có quyền truy cập
   if (!isAuthorized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-4">
@@ -67,7 +64,6 @@ export default function AdminLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-100 w-full">
-      {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col">
         <div className="p-6 border-b border-slate-800">
           <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-200">
@@ -98,9 +94,7 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Header */}
         <header className="h-16 bg-white shadow-sm flex items-center justify-between px-8">
           <h1 className="text-xl font-semibold text-gray-800">Quản trị viên</h1>
           <div className="flex items-center space-x-4">
@@ -110,7 +104,6 @@ export default function AdminLayout({
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 p-8 overflow-auto">
           {children}
         </main>

@@ -68,7 +68,6 @@ export default function CreateProduct() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Header bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
           <Link
@@ -84,7 +83,6 @@ export default function CreateProduct() {
           </div>
         </div>
 
-        {/* Nút trở về coi doanh thu */}
         <Link
           href="/admin#daily-revenue"
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all"
@@ -164,7 +162,6 @@ export default function CreateProduct() {
             </div>
           </div>
 
-          {/* Đường dẫn ảnh */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
               <ImageIcon size={14} /> Đường dẫn ảnh (Image URL)
@@ -179,7 +176,6 @@ export default function CreateProduct() {
             />
           </div>
 
-          {/* Đường dẫn video */}
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
               <Video size={14} /> Đường dẫn video (Video URL)
@@ -194,7 +190,6 @@ export default function CreateProduct() {
             />
           </div>
 
-          {/* Live Preview Media */}
           {(formData.imageUrl || formData.videoUrl) && (
             <div className="p-4 bg-slate-50 rounded-xl border border-gray-200">
               <p className="text-xs font-bold text-gray-600 mb-3 flex items-center gap-1.5">

@@ -63,7 +63,6 @@ export default function MyOrdersPage() {
 
     return (
         <div className="max-w-[1000px] mx-auto px-4 py-8 min-h-[calc(100vh-80px)] text-black">
-            {/* Header */}
             <div className="flex items-center justify-between mb-8 pb-4 border-b-2 border-[#173B70]">
                 <div className="flex items-center gap-3">
                     <Link href="/" className="text-black hover:text-[#173B70] transition-colors p-1" title="Về trang chủ">

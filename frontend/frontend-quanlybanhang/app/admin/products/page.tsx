@@ -14,7 +14,6 @@ export default function AdminProducts() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Kiem tra quyen admin
     const role = getUserRoleFromToken();
     if (role === "ADMIN" || role === "ROLE_ADMIN") {
       setIsAdmin(true);
@@ -94,7 +93,6 @@ export default function AdminProducts() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        {/* Toolbar */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <div className="relative w-full sm:w-64">
             <input
@@ -116,7 +114,6 @@ export default function AdminProducts() {
           </select>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>

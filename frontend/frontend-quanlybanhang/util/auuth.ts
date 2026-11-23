@@ -1,5 +1,2 @@
-/**
- * @deprecated File này được đổi tên thành 'auth.ts' để chuẩn Clean Code.
- * Giữ lại file này để tương thích ngược với các file import cũ nếu có.
- */
+/** @deprecated Dùng './auth' thay thế (giữ lại để tương thích ngược) */
 export * from './auth';

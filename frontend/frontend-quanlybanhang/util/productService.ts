@@ -22,11 +22,14 @@ export interface Product {
 
 const STORAGE_KEY_PRODUCTS = 'ipworld_products_cache';
 const EVENT_NAME = 'ipworld_products_updated';
+const LEGACY_FAKE_IDS = [12, 13, 14, 15, 16, 17, 18];
 
-// Danh sách rỗng: Toàn bộ sản phẩm được lấy và lưu trực tiếp từ database, không còn sản phẩm ảo
 export const INITIAL_CATALOG: Product[] = [];
 
-// Xóa triệt để các sản phẩm ảo cũ từng lưu trong localStorage của người dùng
+// Loại bỏ sản phẩm mẫu cũ (ID 12-18 hoặc >= 1000) còn sót trong localStorage
+const isValidRealProduct = (p: Product) =>
+    Boolean(p.id) && !LEGACY_FAKE_IDS.includes(p.id) && p.id < 1000;
+
 const cleanLegacyFakeProducts = () => {
     if (typeof window === 'undefined') return;
     try {
@@ -34,23 +37,19 @@ const cleanLegacyFakeProducts = () => {
         if (raw) {
             const list: Product[] = JSON.parse(raw);
             if (Array.isArray(list)) {
-                // Loại bỏ bất kỳ sản phẩm ảo cũ nào (ID khởi tạo từ hình 12-18 hoặc ID >= 1000)
-                const cleaned = list.filter(p => p.id && ![12, 13, 14, 15, 16, 17, 18].includes(p.id) && p.id < 1000);
+                const cleaned = list.filter(isValidRealProduct);
                 if (cleaned.length !== list.length) {
                     localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(cleaned));
                 }
             }
         }
-    } catch (e) {
-        // Bỏ qua lỗi parse
-    }
+    } catch {}
 };
 
 if (typeof window !== 'undefined') {
     cleanLegacyFakeProducts();
 }
 
-/* ── Bắn sự kiện đồng bộ toàn ứng dụng ── */
 export const broadcastProductChange = (action: 'create' | 'update' | 'delete', data?: any) => {
     if (typeof window === 'undefined') return;
     try {
@@ -60,16 +59,12 @@ export const broadcastProductChange = (action: 'create' | 'update' | 'delete', d
     }
 };
 
-/* ── Service chính: Tương tác 100% với Database thật ── */
 export const productService = {
-    /**
-     * Lấy toàn bộ sản phẩm thực tế được lưu trong cơ sở dữ liệu.
-     */
     async getAllProducts(): Promise<Product[]> {
         try {
             const data = await fetchClient('/products');
             if (Array.isArray(data)) {
-                // Lưu cache dữ liệu thật từ DB phòng khi rớt mạng
+                // Lưu cache cục bộ để fallback khi mất kết nối backend
                 if (typeof window !== 'undefined') {
                     try {
                         localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(data));
@@ -81,14 +76,13 @@ export const productService = {
             console.warn('[productService] Không thể kết nối backend để tải sản phẩm, thử đọc cache cục bộ:', err.message);
         }
 
-        // Nếu mạng gián đoạn, chỉ hiển thị dữ liệu thật đã lưu trước đó từ DB
         if (typeof window !== 'undefined') {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
                 if (raw) {
                     const parsed = JSON.parse(raw);
                     if (Array.isArray(parsed)) {
-                        return parsed.filter(p => p.id && ![12, 13, 14, 15, 16, 17, 18].includes(p.id) && p.id < 1000);
+                        return parsed.filter(isValidRealProduct);
                     }
                 }
             } catch {}
@@ -97,9 +91,6 @@ export const productService = {
         return [];
     },
 
-    /**
-     * Lấy sản phẩm theo danh mục từ cơ sở dữ liệu thật.
-     */
     async getProductsByCategory(categoryNameOrSlug: string, aliases: string[] = []): Promise<Product[]> {
         const all = await this.getAllProducts();
         const searchTerms = [categoryNameOrSlug, ...aliases].map(s => s.toLowerCase().trim());
@@ -109,12 +100,11 @@ export const productService = {
             const prodName = p.name?.toLowerCase().trim() || '';
             const desc = p.description?.toLowerCase().trim() || '';
 
-            // 1. Khớp chính xác theo tên danh mục trong Database
             if (searchTerms.some(term => catName.includes(term) || term.includes(catName))) {
                 return true;
             }
 
-            // 2. Khớp theo từ khóa sản phẩm nếu danh mục chưa gắn chuẩn
+            // Fallback khớp theo từ khóa nếu sản phẩm chưa được gắn danh mục chuẩn
             const slug = categoryNameOrSlug.toLowerCase();
             if (slug.includes('dien-thoai') || slug.includes('phone')) {
                 return prodName.includes('iphone') || prodName.includes('điện thoại') || prodName.includes('galaxy') || desc.includes('smartphone');
@@ -139,13 +129,9 @@ export const productService = {
         });
     },
 
-    /**
-     * Xóa sản phẩm: Xóa trực tiếp trong Database qua Backend API.
-     */
     async deleteProduct(id: number, name?: string): Promise<boolean> {
         await fetchClient(`/products/${id}`, { method: 'DELETE' });
 
-        // Cập nhật lại cache cục bộ
         if (typeof window !== 'undefined') {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
@@ -161,9 +147,6 @@ export const productService = {
         return true;
     },
 
-    /**
-     * Thêm sản phẩm mới: BẮT BUỘC lưu vào Database thông qua Backend API.
-     */
     async createProduct(productData: any): Promise<Product> {
         const payload: any = {
             name: productData.name,
@@ -190,7 +173,6 @@ export const productService = {
             throw new Error('Lỗi: Máy chủ không trả về thông tin sản phẩm sau khi lưu vào database.');
         }
 
-        // Cập nhật cache cục bộ với sản phẩm thật vừa lưu
         if (typeof window !== 'undefined') {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
@@ -204,9 +186,6 @@ export const productService = {
         return savedProduct;
     },
 
-    /**
-     * Cập nhật thông tin sản phẩm trong Database.
-     */
     async updateProduct(id: number, productData: any): Promise<Product> {
         const payload: any = {
             ...productData,
@@ -223,7 +202,6 @@ export const productService = {
             throw new Error('Lỗi: Không thể cập nhật sản phẩm trong database.');
         }
 
-        // Cập nhật cache cục bộ
         if (typeof window !== 'undefined') {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
@@ -239,9 +217,6 @@ export const productService = {
         return updated;
     },
 
-    /**
-     * Đăng ký lắng nghe sự kiện thay đổi sản phẩm.
-     */
     subscribe(callback: () => void): () => void {
         if (typeof window === 'undefined') return () => {};
 

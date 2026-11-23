@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +22,7 @@ import com.example.demo.dto.UserDTO.UserRegisterDTO;
 import com.example.demo.dto.UserDTO.UserUpdateDTO;
 import com.example.demo.entity.User;
 import com.example.demo.security.JwtUtil;
+import com.example.demo.service.UserService;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -117,7 +118,7 @@ class UserServiceTest {
         phoneUser.setId(2L);
         phoneUser.setUsername("phoneuser");
         phoneUser.setPassword("encodedPassword");
-        phoneUser.setEmail(null); // Không có email
+        phoneUser.setEmail(null);
         phoneUser.setPhone("0987654321");
         phoneUser.setRole("ROLE_CLIENT");
 
@@ -191,7 +192,7 @@ class UserServiceTest {
     void testGetAllUser_Success() {
         when(userRepository.findAll()).thenReturn(List.of(sampleUser));
 
-        List<User> list = userService.getAllUser();
+        List<User> list = userService.getAllUsers();
 
         assertNotNull(list);
         assertEquals(1, list.size());

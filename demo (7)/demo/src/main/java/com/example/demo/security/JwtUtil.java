@@ -21,11 +21,10 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // Sửa lại hàm generateToken để nhận thêm role và nhét vào claim
     public String generateToken(String username, String role) {
         return Jwts.builder()
                 .setSubject(username)
-                .claim("role", role) // <--- Nhét role vào đây (key là "role")
+                .claim("role", role)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)

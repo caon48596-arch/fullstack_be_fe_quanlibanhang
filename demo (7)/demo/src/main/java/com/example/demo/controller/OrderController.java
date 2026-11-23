@@ -27,12 +27,12 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    @PostMapping("/CreateAndSum")
+    @PostMapping({"", "/CreateAndSum"})
     public ResponseEntity<ResponseDTO<?>> createAndSum(
             @RequestBody OrderCreateandSumDTO orderCreateandSumDTO,
             Principal principal) {
         try {
-            // Bảo mật: Bắt buộc người dùng phải đăng nhập mới được thanh toán và tạo hóa đơn
+            // Ưu tiên lấy email từ JWT Principal đã xác thực
             String userEmail = (principal != null && principal.getName() != null)
                     ? principal.getName()
                     : orderCreateandSumDTO.getEmail();
@@ -59,7 +59,7 @@ public class OrderController {
             @RequestParam(required = false) String email,
             Principal principal) {
         try {
-            // Bảo mật: Bắt buộc lấy email từ JWT của người dùng đã xác thực nếu có
+            // Ưu tiên lấy email từ JWT Principal đã xác thực
             String userEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
             if (userEmail == null || userEmail.trim().isEmpty()) {
                 return ResponseEntity.badRequest().build();
@@ -75,7 +75,7 @@ public class OrderController {
             @RequestParam(required = false) String email,
             Principal principal) {
         try {
-            // Bảo mật: Bắt buộc lấy email từ JWT của người dùng đã xác thực nếu có
+            // Ưu tiên lấy email từ JWT Principal đã xác thực
             String userEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
             if (userEmail == null || userEmail.trim().isEmpty()) {
                 return ResponseEntity.badRequest().build();
@@ -110,22 +110,20 @@ public class OrderController {
         }
     }
 
-    // 2. Xem chi tiết 1 đơn hàng theo ID
     @GetMapping("/ReadOne/{id}")
-    public ResponseEntity<ResponseDTO<String>> readOne(@PathVariable Long id) {
+    public ResponseEntity<ResponseDTO<String>> getOrderById(@PathVariable Long id) {
         try {
-            orderService.ReadOne(id);
+            orderService.getOrderById(id);
             return ResponseEntity.ok(ResponseDTO.success("Hiển thị thành công đơn hàng"));
         } catch (Exception e) {
             return ResponseEntity.status(404).body(ResponseDTO.error("Không tìm thấy đơn hàng", "404"));
         }
     }
 
-    // 3. Xem danh sách tất cả các món hàng đã đặt (Chỉ Admin)
     @GetMapping("/ReadAll")
-    public ResponseEntity<List<OrderItem>> readAll() {
+    public ResponseEntity<List<OrderItem>> getAllOrderItems() {
         try {
-            return ResponseEntity.ok(orderService.ReadAll());
+            return ResponseEntity.ok(orderService.getAllOrderItems());
         } catch (Exception e) {
             return ResponseEntity.status(403).build();
         }

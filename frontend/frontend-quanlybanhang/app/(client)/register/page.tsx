@@ -42,14 +42,12 @@ export default function RegisterPage() {
         try {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
 
-            // Lưu thông tin đăng ký vào sessionStorage
             sessionStorage.setItem('pendingAuthData', JSON.stringify({
                 username: formData.username.trim(),
                 email:    formData.email.trim(),
                 password: formData.password,
             }));
 
-            // Gửi yêu cầu lấy mã OTP
             let otpSent = false;
             try {
                 const nextRes = await fetch('/api/auth/otp/send', {
@@ -105,8 +103,6 @@ export default function RegisterPage() {
     return (
         <div className={authLayoutStyles.page}>
             <div className={authLayoutStyles.container}>
-
-                {/* Logo bên trái */}
                 <div className={authLayoutStyles.logoWrapper}>
                     <img
                         src="/HINH_TRANG_CHU/logo_dang nhap.png"
@@ -119,7 +115,6 @@ export default function RegisterPage() {
                     </h2>
                 </div>
 
-                {/* Form đăng ký */}
                 <div className={authLayoutStyles.card}>
                     <h2 className={authLayoutStyles.cardTitle}>ĐĂNG KÝ TÀI KHOẢN</h2>
 

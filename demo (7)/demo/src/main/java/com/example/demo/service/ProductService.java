@@ -20,7 +20,6 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
 
-    // create
     public Product createProduct(String name, double price, int stock, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("không tìm thấy danh mục"));
@@ -33,12 +32,10 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    // xem all prodcut
     public Page<Product> getAllProducts(int page, int size) {
         return productRepository.findAll(PageRequest.of(page, size, Sort.by("id").descending()));
     }
 
-    // cặp nhật sl sản phẩm
     @Transactional
     public void reduceStock(long id, int quantity) {
         if (quantity <= 0) {
@@ -55,7 +52,6 @@ public class ProductService {
         productRepository.save(product);
     }
 
-    // tìm sp giá thấp nhất
     public Page<Product> searchProducts(String name, double minprice, int size, int page) {
         return productRepository.searchProduct(name, minprice, PageRequest.of(page, size));
     }

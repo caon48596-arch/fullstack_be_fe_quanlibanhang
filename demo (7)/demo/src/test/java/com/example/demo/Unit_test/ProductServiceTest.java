@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,6 +23,7 @@ import com.example.demo.Repository.CategoryRepository;
 import com.example.demo.Repository.ProductRepository;
 import com.example.demo.entity.Category;
 import com.example.demo.entity.Product;
+import com.example.demo.service.ProductService;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
@@ -116,7 +117,7 @@ class ProductServiceTest {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            productService.reduceStock(1L, 20); // Kho chỉ có 10
+            productService.reduceStock(1L, 20);
         });
 
         assertTrue(exception.getMessage().contains("sản phẩm k đủ"));

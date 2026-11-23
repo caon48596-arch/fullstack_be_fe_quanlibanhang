@@ -32,9 +32,6 @@ public class DataInitializer {
                     System.out.println("Đã thêm danh mục mặc định: " + catName);
                 }
             }
-
-            // ĐÃ XÓA TOÀN BỘ CODE SEED SẢN PHẨM ẢO TỰ ĐỘNG.
-            // Hệ thống chỉ lưu trữ và hiển thị sản phẩm do Admin tạo (create) hoặc cập nhật (update).
         };
     }
 }

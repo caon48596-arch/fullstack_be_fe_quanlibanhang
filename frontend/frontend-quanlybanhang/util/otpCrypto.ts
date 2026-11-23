@@ -2,9 +2,7 @@ import crypto from 'crypto';
 
 const OTP_SECRET = process.env.OTP_SECRET || 'ipworld_secret_otp_encryption_key_2026';
 
-/**
- * Sinh mã OTP session token có chữ ký số bí mật (giúp serverless nhận diện OTP mà không bị mất session)
- */
+// Ký HMAC-SHA256 để xác thực OTP stateless trên môi trường serverless
 export function generateOtpSessionToken(email: string, otp: string, ttlSeconds = 300): string {
     const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
     const normalizedEmail = email.toLowerCase().trim();
@@ -20,9 +18,6 @@ export function generateOtpSessionToken(email: string, otp: string, ttlSeconds =
     return Buffer.from(JSON.stringify(payload)).toString('base64');
 }
 
-/**
- * Kiểm tra tính hợp lệ của OTP dựa trên session token và mã người dùng nhập
- */
 export function verifyOtpWithSessionToken(
     sessionToken: string,
     email: string,

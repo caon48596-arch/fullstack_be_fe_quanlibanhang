@@ -4,13 +4,13 @@ import { DynamoDBDocumentClient, PutCommand, GetCommand, DeleteCommand, UpdateCo
 export interface OtpRecord {
     identifier: string; // Partition key: email/phone
     otp: string;
-    expiresAt: number; // Unix epoch timestamp in seconds for native DynamoDB TTL
+    expiresAt: number; // Unix epoch (giây) cho DynamoDB TTL
     attempts: number;
     type: 'LOGIN' | 'REGISTER';
     createdAt: string;
 }
 
-// In-memory fallback cache when AWS credentials are not yet configured
+// Fallback in-memory khi chưa cấu hình AWS credentials
 const inMemoryDynamoFallback = new Map<string, OtpRecord>();
 
 const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-1';
@@ -41,9 +41,6 @@ if (accessKeyId && secretAccessKey) {
     console.log('[AWS DynamoDB] Chưa cấu hình AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY trong .env.local -> Kích hoạt chế độ mô phỏng DynamoDB an toàn.');
 }
 
-/**
- * Lưu mã OTP vào AWS DynamoDB với TTL tự động hủy
- */
 export async function saveOtpToDynamoDB(params: {
     email: string;
     otp: string;
@@ -76,7 +73,6 @@ export async function saveOtpToDynamoDB(params: {
             return { success: true, channel: 'AWS_DYNAMODB' };
         } catch (error: any) {
             console.error(`[AWS DynamoDB] ❌ Lỗi khi PutItem lên DynamoDB:`, error);
-            // Fallback lưu tạm bộ nhớ nếu AWS trả lỗi
             inMemoryDynamoFallback.set(identifier, record);
             return { success: true, channel: 'MEMORY_FALLBACK' };
         }
@@ -87,9 +83,6 @@ export async function saveOtpToDynamoDB(params: {
     }
 }
 
-/**
- * Lấy mã OTP từ AWS DynamoDB
- */
 export async function getOtpFromDynamoDB(email: string): Promise<OtpRecord | null> {
     const identifier = email.toLowerCase().trim();
 
@@ -111,9 +104,6 @@ export async function getOtpFromDynamoDB(email: string): Promise<OtpRecord | nul
     }
 }
 
-/**
- * Cập nhật số lần thử OTP trong AWS DynamoDB
- */
 export async function incrementOtpAttempts(email: string, currentAttempts: number): Promise<void> {
     const identifier = email.toLowerCase().trim();
     const newAttempts = currentAttempts + 1;
@@ -140,9 +130,6 @@ export async function incrementOtpAttempts(email: string, currentAttempts: numbe
     }
 }
 
-/**
- * Xóa mã OTP khỏi AWS DynamoDB (dùng 1 lần hoặc hủy)
- */
 export async function deleteOtpFromDynamoDB(email: string): Promise<void> {
     const identifier = email.toLowerCase().trim();
 

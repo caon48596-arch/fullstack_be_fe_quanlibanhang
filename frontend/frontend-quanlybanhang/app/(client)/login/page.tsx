@@ -21,7 +21,7 @@ function LoginForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Nếu đã đăng nhập, tự động chuyển về trang phù hợp, không bắt đăng nhập lại
+    // Tự động chuyển trang nếu đã có phiên đăng nhập
     useEffect(() => {
         try {
             const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
@@ -33,9 +33,7 @@ function LoginForm() {
                     router.replace('/');
                 }
             }
-        } catch {
-            // Không làm gì nếu chưa có token
-        }
+        } catch {}
     }, [router]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,7 +56,7 @@ function LoginForm() {
             const cleanEmail = formData.email.trim();
             const password = formData.password;
 
-            // 1. Thử đăng nhập trực tiếp bằng tài khoản và mật khẩu trước
+            // Ưu tiên đăng nhập trực tiếp; nếu không trả về token thì chuyển sang luồng OTP
             let directToken: string | null = null;
             let directUser: any = null;
 
@@ -89,7 +87,6 @@ function LoginForm() {
                 console.warn('[Login] Thử đăng nhập trực tiếp không phản hồi:', directErr);
             }
 
-            // Nếu đăng nhập trực tiếp thành công, lưu phiên và điều hướng ngay lập tức
             if (directToken) {
                 sessionStorage.setItem('accessToken', directToken);
                 localStorage.setItem('accessToken', directToken);
@@ -110,13 +107,11 @@ function LoginForm() {
                 return;
             }
 
-            // 2. Nếu đăng nhập trực tiếp cần OTP hoặc cần mã xác thực
             sessionStorage.setItem('pendingAuthData', JSON.stringify({
                 email: cleanEmail,
                 password: password,
             }));
 
-            // Gửi yêu cầu mã xác thực OTP qua email
             let otpSent = false;
             try {
                 const nextRes = await fetch('/api/auth/otp/send', {
@@ -135,7 +130,7 @@ function LoginForm() {
                 console.warn('[Login] Đang kết nối dự phòng sang Backend:', nextErr);
             }
 
-            // Nếu Next.js API chưa được hoặc fallback, gọi sang Backend
+            // Fallback sang Backend nếu Next.js API không gửi được OTP
             if (!otpSent) {
                 const response = await fetch(`${apiBase}/users/request-otp`, {
                     method: 'POST',
@@ -162,8 +157,6 @@ function LoginForm() {
     return (
         <div className={authLayoutStyles.page}>
             <div className={authLayoutStyles.container}>
-
-                {/* Logo bên trái */}
                 <div className={authLayoutStyles.logoWrapper}>
                     <img
                         src="/HINH_TRANG_CHU/logo_dang nhap.png"
@@ -176,7 +169,6 @@ function LoginForm() {
                     </h2>
                 </div>
 
-                {/* Form đăng nhập */}
                 <div className={authLayoutStyles.card}>
                     <div className="flex items-center justify-between mb-2">
                         <h2 className={authLayoutStyles.cardTitle}>ĐĂNG NHẬP</h2>

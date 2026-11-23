@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mail.javamail.JavaMailSender;
+
+import com.example.demo.service.EmailService;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -30,7 +32,6 @@ class EmailServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        // Cài đặt giá trị private fromEmail thông qua reflection
         Field field = EmailService.class.getDeclaredField("fromEmail");
         field.setAccessible(true);
         field.set(emailService, "noreply@example.com");

@@ -7,7 +7,6 @@ export default function Footer() {
     return (
         <footer className={footerStyles.wrapper}>
             <div className={footerStyles.grid}>
-                {/* Cột 1: Thông tin thương hiệu */}
                 <div>
                     <h3 className={footerStyles.columnTitle}>
                         IPWORLD
@@ -20,7 +19,6 @@ export default function Footer() {
                     </p>
                 </div>
 
-                {/* Cột 2: Chính sách hỗ trợ */}
                 <div>
                     <h3 className={footerStyles.columnTitle}>
                         Chính sách hỗ trợ
@@ -45,7 +43,6 @@ export default function Footer() {
                     </ul>
                 </div>
 
-                {/* Cột 3: Thông tin liên hệ */}
                 <div>
                     <h3 className={footerStyles.columnTitle}>
                         Thông tin liên hệ
@@ -71,7 +68,6 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Chân đáy */}
             <div className={footerStyles.bottomBar}>
                 <p>© 2026 Bản quyền thuộc về IPWORLD. Thiết kế và phát triển bởi TEAM-NHD.</p>
             </div>

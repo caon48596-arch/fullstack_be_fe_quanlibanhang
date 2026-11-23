@@ -13,19 +13,12 @@ import jakarta.transaction.Transactional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    // tim user(login và register)
     @Query("SELECT u FROM User u WHERE u.email = ?1")
     Optional<User> findByEmail(String email);
 
     @Query("SELECT u FROM User u WHERE u.phone = ?1")
     Optional<User> findByPhone(String phone);
 
-    // @Modifying
-    // @Transactional
-    // @Query(value = "INSERT INTO Users(user,email) VALUES(?1, ?2)",nativeQuery = true);
-    // void saveNewUser(String User, String email);
-
-    // cặp nhật online(logout và login)
     @Modifying
     @Transactional
     @Query(value = "UPDATE Users SET is_online = ?2 WHERE id = ?1", nativeQuery = true)

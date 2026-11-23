@@ -1,6 +1,6 @@
 "use client";
 
-import { DollarSign, Package, ShoppingBag, Users, Calendar, TrendingUp, Plus, ArrowUpRight, Search } from "lucide-react";
+import { DollarSign, Package, ShoppingBag, Users, Calendar, Plus, ArrowUpRight, Search } from "lucide-react";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchClient } from "../../util/fetchClient";
@@ -64,7 +64,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // Format data for chart (sorted chronological for chart)
   const chartData = [...dashboardData.dailyRevenue]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((item: any) => ({
@@ -72,13 +71,11 @@ export default function AdminDashboard() {
       Revenue: item.revenue
     }));
 
-  // Calculations for daily revenue breakdown
   const dailyList = dashboardData.dailyRevenue || [];
   const totalDays = dailyList.length;
   const avgDailyRevenue = totalDays > 0 ? dashboardData.totalRevenue / totalDays : 0;
   const maxDay = dailyList.reduce((max: any, cur: any) => (!max || cur.revenue > max.revenue ? cur : max), null);
 
-  // Filter daily revenue by search
   const filteredDailyRevenue = dailyList.filter((item: any) => {
     if (!dateSearch.trim()) return true;
     const formatted = new Date(item.date).toLocaleDateString('vi-VN');
@@ -87,7 +84,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header & Quick Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Tổng quan hệ thống</h2>
@@ -115,7 +111,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
@@ -133,7 +128,6 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      {/* Charts Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <div>
@@ -172,7 +166,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ================= BẢNG DOANH THU CHI TIẾT THEO NGÀY ================= */}
       <div id="daily-revenue" className="bg-white rounded-xl shadow-sm border-2 border-emerald-500/20 p-5 sm:p-6 scroll-mt-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 mb-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -190,7 +183,6 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Tìm kiếm theo ngày */}
           <div className="relative w-full md:w-64">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -203,7 +195,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 3 Thẻ thống kê doanh thu ngày */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
             <p className="text-xs font-semibold text-slate-500">Doanh thu trung bình/ngày</p>
@@ -225,7 +216,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Bảng chi tiết từng ngày */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
@@ -303,7 +293,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Recent Activity */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sm:p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base sm:text-lg font-bold text-gray-800">Đơn hàng gần đây</h3>

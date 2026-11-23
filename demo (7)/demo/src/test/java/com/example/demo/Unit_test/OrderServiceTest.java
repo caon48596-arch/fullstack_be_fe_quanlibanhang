@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +27,7 @@ import com.example.demo.entity.Order;
 import com.example.demo.entity.OrderItem;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
+import com.example.demo.service.OrderService;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -90,9 +91,9 @@ class OrderServiceTest {
         Order order = orderService.placeOrder(null, items, null, "buyer@example.com");
 
         assertNotNull(order);
-        assertEquals(200.0, order.getTotalAmount()); // 2 * 100.0 = 200.0
+        assertEquals(200.0, order.getTotalAmount());
         assertEquals("PENDING", order.getStatus());
-        assertEquals(18, sampleProduct.getStock()); // 20 - 2 = 18
+        assertEquals(18, sampleProduct.getStock());
         assertEquals(sampleUser, order.getUser());
         verify(productRepository, times(1)).save(sampleProduct);
         verify(orderRepository, times(1)).save(any(Order.class));
@@ -122,8 +123,8 @@ class OrderServiceTest {
         Order order = orderService.placeOrder(null, items, "GIAM50", "buyer@example.com");
 
         assertNotNull(order);
-        assertEquals(150.0, order.getTotalAmount()); // 200 - 50 = 150
-        assertEquals(9, coupon.getQuantity()); // 10 - 1 = 9
+        assertEquals(150.0, order.getTotalAmount());
+        assertEquals(9, coupon.getQuantity());
         verify(couponRepository, times(1)).save(coupon);
     }
 
@@ -146,7 +147,7 @@ class OrderServiceTest {
     @Test
     @DisplayName("Đặt hàng thất bại khi tồn kho không đủ")
     void testPlaceOrder_InsufficientStock_ThrowsException() {
-        sampleProduct.setStock(1); // Chỉ còn 1 sản phẩm mà order đòi 2
+        sampleProduct.setStock(1);
         List<OrderItem> items = new ArrayList<>();
         items.add(sampleItem);
 
@@ -188,7 +189,7 @@ class OrderServiceTest {
         expiredCoupon.setActive(true);
         expiredCoupon.setQuantity(5);
         expiredCoupon.setDiscountAmount(20.0);
-        expiredCoupon.setExpirationDate(LocalDateTime.now().minusDays(1)); // Đã hết hạn hôm qua
+        expiredCoupon.setExpirationDate(LocalDateTime.now().minusDays(1));
 
         when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct));
         when(couponRepository.findByCodeForUpdate("EXPIRED")).thenReturn(Optional.of(expiredCoupon));
@@ -230,7 +231,7 @@ class OrderServiceTest {
         order.setId(1L);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        Order result = orderService.ReadOne(1L);
+        Order result = orderService.getOrderById(1L);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -242,7 +243,7 @@ class OrderServiceTest {
         when(orderRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(RuntimeException.class, () -> {
-            orderService.ReadOne(999L);
+            orderService.getOrderById(999L);
         });
     }
 
@@ -251,7 +252,7 @@ class OrderServiceTest {
     void testReadAll_Success() {
         when(orderItemRepository.findAll()).thenReturn(List.of(sampleItem));
 
-        List<OrderItem> items = orderService.ReadAll();
+        List<OrderItem> items = orderService.getAllOrderItems();
 
         assertNotNull(items);
         assertEquals(1, items.size());

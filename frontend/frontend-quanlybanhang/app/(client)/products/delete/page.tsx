@@ -19,7 +19,6 @@ function DeleteProductContent() {
     const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
     useEffect(() => {
-        // Kiểm tra quyền Admin
         const role = getUserRoleFromToken();
         if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
             setIsAdmin(false);
@@ -34,7 +33,6 @@ function DeleteProductContent() {
             return;
         }
 
-        // Tải thông tin sản phẩm để hiển thị tên xác nhận
         const fetchProductDetail = async () => {
             try {
                 const data = await fetchClient(`/products/${id}`);
@@ -51,6 +49,13 @@ function DeleteProductContent() {
     }, [id]);
 
     const handleDelete = async () => {
+        const role = getUserRoleFromToken();
+        if (role !== 'ROLE_ADMIN' && role !== 'ADMIN') {
+            alert("Cấm tuyệt đối: Chỉ có Quản trị viên (Admin) mới có quyền xóa sản phẩm!");
+            router.push('/');
+            return;
+        }
+
         if (!id) return;
         setIsDeleting(true);
         setError(null);
@@ -75,8 +80,17 @@ function DeleteProductContent() {
 
     if (!isAdmin) {
         return (
-            <div className="text-center py-20 text-red-500 font-bold text-xl">
-                Bạn không có quyền thực hiện chức năng này. Chỉ quản trị viên mới được phép xóa.
+            <div className="max-w-xl mx-auto my-12 bg-white rounded-2xl p-8 border-2 border-red-200 text-center shadow-lg">
+                <p className="text-red-600 font-black text-lg mb-2">Quyền Truy Cập Bị Từ Chối</p>
+                <p className="text-slate-600 text-xs sm:text-sm mb-6">
+                    Cấm tuyệt đối: Bạn không có quyền thực hiện chức năng này. Chỉ có Quản trị viên (Admin) mới được phép xóa sản phẩm.
+                </p>
+                <Link
+                    href="/login"
+                    className="inline-block px-5 py-2.5 rounded-xl bg-[#173B70] hover:bg-[#0866e8] text-white font-bold text-xs"
+                >
+                    Đăng nhập tài khoản Admin
+                </Link>
             </div>
         );
     }

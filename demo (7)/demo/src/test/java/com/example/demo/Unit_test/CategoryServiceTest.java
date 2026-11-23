@@ -1,4 +1,4 @@
-package com.example.demo.service;
+package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.demo.Repository.CategoryRepository;
 import com.example.demo.entity.Category;
+import com.example.demo.service.CategoryService;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {

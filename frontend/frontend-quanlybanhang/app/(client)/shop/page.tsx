@@ -25,12 +25,6 @@ export default function ShopPage() {
     }, []);
 
     const handleAddToCart = (product: Product) => {
-        const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
-        if (!token) {
-            alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
-            return;
-        }
-
         const rawImageUrl = product.imageUrl || product.image_url || '/HINH_TRANG_CHU/logo2.jpg';
         addToCart({
             id: product.id,
@@ -45,7 +39,6 @@ export default function ShopPage() {
     return (
         <div className="bg-gray-50 min-h-screen py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Phần Header của trang mua sắm */}
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
                         Cửa Hàng Công Nghệ
@@ -65,7 +58,6 @@ export default function ShopPage() {
                         <p className="text-base font-semibold">Chưa có sản phẩm nào trong cơ sở dữ liệu.</p>
                     </div>
                 ) : (
-                    /* Lưới sản phẩm (Grid) */
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                         {products.map((product) => {
                             const rawImageUrl = product.imageUrl || product.image_url || '/HINH_TRANG_CHU/logo2.jpg';
@@ -76,7 +68,6 @@ export default function ShopPage() {
                                     key={product.id}
                                     className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col group border border-gray-100"
                                 >
-                                    {/* Ảnh sản phẩm */}
                                     <div className="h-48 overflow-hidden relative bg-gray-100 flex items-center justify-center">
                                         <img
                                             src={displayImage}
@@ -85,7 +76,6 @@ export default function ShopPage() {
                                         />
                                     </div>
 
-                                    {/* Thông tin sản phẩm */}
                                     <div className="p-5 flex flex-col flex-grow">
                                         <div className="text-xs text-blue-600 font-bold mb-1">
                                             {product.category?.name || 'Sản phẩm'}

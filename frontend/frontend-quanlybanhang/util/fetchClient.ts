@@ -13,17 +13,11 @@ export interface JwtCustomPayload {
 const PRIMARY_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
 const FALLBACK_API_URL = 'https://project1-production-6826.up.railway.app/api';
 
-/**
- * Lấy Token an toàn từ cả sessionStorage và localStorage
- */
 export const getStoredToken = (): string | null => {
     if (typeof window === 'undefined') return null;
     return sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken') || null;
 };
 
-/**
- * Lưu Token đồng bộ vào cả sessionStorage và localStorage
- */
 export const setStoredToken = (token: string) => {
     if (typeof window === 'undefined') return;
     try {
@@ -34,9 +28,6 @@ export const setStoredToken = (token: string) => {
     }
 };
 
-/**
- * Xóa Token khỏi bộ nhớ phiên
- */
 export const clearStoredToken = () => {
     if (typeof window === 'undefined') return;
     try {
@@ -48,10 +39,7 @@ export const clearStoredToken = () => {
 };
 
 export const fetchClient = async (endpoint: string, options: RequestInit = {}) => {
-    // 1. Lấy token từ bộ nhớ
     const token = getStoredToken();
-
-    // 2. Gắn token vào Header (nếu có)
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -59,9 +47,7 @@ export const fetchClient = async (endpoint: string, options: RequestInit = {}) =
     };
 
     let response: Response | null = null;
-    let usedBaseUrl = PRIMARY_API_URL;
 
-    // 3. Gọi sang Backend (Có cơ chế tự động chuyển dự phòng nếu Backend cục bộ chưa bật)
     try {
         response = await fetch(`${PRIMARY_API_URL}${endpoint}`, {
             cache: 'no-store',
@@ -69,17 +55,16 @@ export const fetchClient = async (endpoint: string, options: RequestInit = {}) =
             headers
         });
     } catch (primaryErr) {
-        // Nếu địa chỉ chính là localhost và không kết nối được, tự động chuyển sang Railway
+        // Fallback sang Railway khi backend localhost chưa khởi động
         if (PRIMARY_API_URL.includes('localhost') && PRIMARY_API_URL !== FALLBACK_API_URL) {
             console.warn(`[fetchClient] Kết nối ${PRIMARY_API_URL} thất bại, tự động chuyển sang Railway...`);
-            usedBaseUrl = FALLBACK_API_URL;
             try {
                 response = await fetch(`${FALLBACK_API_URL}${endpoint}`, {
                     cache: 'no-store',
                     ...options,
                     headers
                 });
-            } catch (fallbackErr) {
+            } catch {
                 throw new Error('Không thể kết nối đến máy chủ máy chủ bán hàng. Vui lòng kiểm tra mạng!');
             }
         } else {
@@ -91,9 +76,8 @@ export const fetchClient = async (endpoint: string, options: RequestInit = {}) =
         throw new Error('Không nhận được phản hồi từ máy chủ.');
     }
 
-    // 4. Xử lý lỗi nếu Backend trả về mã lỗi (như 401, 403, 404, 500)
     if (!response.ok) {
-        // Chỉ dọn dẹp token khi thực sự bị 401 Unauthorized từ endpoint bảo mật người dùng
+        // Chỉ xóa token khi 401 từ endpoint bảo mật người dùng để tránh logout nhầm
         if (response.status === 401 && typeof window !== 'undefined') {
             const isProtectedUserEndpoint = endpoint.includes('/users/profile') ||
                                             endpoint.includes('/orders/my-order-items') ||
@@ -104,21 +88,17 @@ export const fetchClient = async (endpoint: string, options: RequestInit = {}) =
             }
         }
 
-        // Cố gắng đọc message lỗi từ Backend trả về
         const errorText = await response.text();
         let errorMessage = `Đã xảy ra lỗi từ máy chủ (Mã: ${response.status})`;
 
         try {
             const errorData = JSON.parse(errorText);
             if (errorData.message) errorMessage = errorData.message;
-        } catch {
-            // Nếu không parse được JSON thì giữ nguyên câu báo lỗi mặc định
-        }
+        } catch {}
 
         throw new Error(errorMessage);
     }
 
-    // 5. Trả về data cho component dùng
     if (response.status === 204 || response.headers.get('content-length') === '0') {
         return {};
     }
@@ -126,17 +106,13 @@ export const fetchClient = async (endpoint: string, options: RequestInit = {}) =
     return response.json();
 };
 
-/**
- * Giải mã an toàn JWT và tự động kiểm tra thời hạn hết hạn (exp).
- * Bảo vệ phiên đăng nhập không bị tự động logout ngoài ý muốn.
- */
 export const getDecodedToken = (): JwtCustomPayload | null => {
     if (typeof window === 'undefined') return null;
 
     const token = getStoredToken();
     if (!token) return null;
 
-    // Hỗ trợ token phiên fallback có dạng ipworld_verified_
+    // Hỗ trợ token phiên fallback dạng ipworld_verified_<base64_email>
     if (token.startsWith('ipworld_verified_')) {
         try {
             const parts = token.split('_');
@@ -160,7 +136,6 @@ export const getDecodedToken = (): JwtCustomPayload | null => {
     try {
         const decoded = jwtDecode<JwtCustomPayload>(token);
 
-        // Kiểm tra thời hạn hết hạn của Token (exp tính bằng giây, Date.now() tính bằng mili-giây)
         if (decoded.exp && decoded.exp * 1000 < Date.now()) {
             console.warn("[JWT] Token đã hết hạn. Đang dọn dẹp phiên đăng nhập.");
             clearStoredToken();
@@ -170,7 +145,6 @@ export const getDecodedToken = (): JwtCustomPayload | null => {
         return decoded;
     } catch (error) {
         console.warn("[JWT] Token không chuẩn format chuẩn nhưng vẫn được giữ để duy trì phiên:", error);
-        // Cố gắng giải mã phần payload (phần thứ 2 của token nếu có)
         try {
             const tokenParts = token.split('.');
             if (tokenParts.length >= 2) {
@@ -184,11 +158,9 @@ export const getDecodedToken = (): JwtCustomPayload | null => {
                 );
                 return JSON.parse(jsonPayload);
             }
-        } catch {
-            // Không parse được
-        }
+        } catch {}
 
-        // Không xóa token vội vã để tránh bị văng session đăng nhập
+        // Giữ nguyên token thay vì xóa ngay để tránh mất phiên ngoài ý muốn
         return {
             sub: 'user@ipworld.vn',
             username: 'Tài khoản',
@@ -218,19 +190,14 @@ export const getValidMediaUrl = (url: string | undefined): string => {
     if (!url || url.trim() === '') return '';
     const cleanUrl = url.trim();
 
-    // Nếu là base64 thì giữ nguyên
     if (cleanUrl.startsWith('data:')) return cleanUrl;
-
-    // Nếu bắt đầu bằng // (ví dụ //imgur.com/...)
     if (cleanUrl.startsWith('//')) return `https:${cleanUrl}`;
 
-    // Nếu là đường dẫn tương đối từ backend
     if (cleanUrl.startsWith('/')) {
         const hostUrl = PRIMARY_API_URL.replace(/\/api\/?$/, '');
         return `${hostUrl}${cleanUrl}`;
     }
 
-    // Nếu không có http/https, thêm https mặc định
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
         return `https://${cleanUrl}`;
     }
