@@ -1,10 +1,17 @@
 services:
   mysql:
-    image: "mysql:latest"
+    image: "mysql:8.4"
     environment:
-      - "MYSQL_DATABASE=ecomerce_db"
+      - "MYSQL_DATABASE=qlbanhang_db"
       - "MYSQL_PASSWORD=secret"
-      - "MYSQL_ROOT_PASSWORD=verysecret"
+      - "MYSQL_ROOT_PASSWORD=123456"
       - "MYSQL_USER=myuser"
     ports:
       - "3306:3306"
+
+  redis:
+    image: "redis:7-alpine"
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    ports:
+      - "6379:6379"
+    restart: unless-stopped

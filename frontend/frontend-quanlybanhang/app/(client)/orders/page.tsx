@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { ShoppingBag, ArrowLeft, Trash2, Plus, Minus, Tag, ShieldCheck, FileText, CheckCircle2, Printer, ExternalLink, LogIn } from 'lucide-react';
-import { fetchClient, getUserNameFromToken } from '@/util/fetchClient';
+import { fetchClient, getUserNameFromToken, getValidMediaUrl } from '@/util/fetchClient';
 
 interface InvoiceData {
     orderId: number;
@@ -32,6 +32,15 @@ export default function CheckoutPage() {
     const [couponMessage, setCouponMessage] = useState({ text: '', isError: false });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [createdInvoice, setCreatedInvoice] = useState<InvoiceData | null>(null);
+    // Idempotency key ổn định cho cùng một phiên thanh toán để tránh tạo đơn trùng nếu double-click / retry
+    const idempotencyKeyRef = useRef<string>('');
+
+    useEffect(() => {
+        // Tạo mới idempotency key mỗi khi giỏ hàng hoặc coupon thay đổi
+        idempotencyKeyRef.current = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `order-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }, [cartItems, appliedCoupon]);
 
     useEffect(() => {
         const token = typeof window !== 'undefined'
@@ -75,21 +84,27 @@ export default function CheckoutPage() {
             const items = cartItems.map(item => ({
                 product: { id: item.id },
                 quantity: item.quantity,
-                Price: item.price
             }));
 
-            const orderId = Math.floor(100000 + Math.random() * 900000);
             const email = getUserNameFromToken() || 'Khách hàng IPWORLD';
+            const idempotencyKey = idempotencyKeyRef.current || `order-${Date.now()}`;
 
-            await fetchClient('/orders/CreateAndSum', {
+            const res = await fetchClient('/orders/CreateAndSum', {
                 method: 'POST',
+                headers: {
+                    'Idempotency-Key': idempotencyKey,
+                },
                 body: JSON.stringify({
-                    id: orderId,
                     items: items,
                     couponCode: appliedCoupon ? appliedCoupon.code : null,
-                    email: email
+                    email: email,
+                    idempotencyKey,
                 })
             });
+
+            const savedOrder = res?.data || res;
+            const resolvedOrderId = savedOrder?.id ?? Date.now();
+            const resolvedTotal = typeof savedOrder?.totalAmount === 'number' ? savedOrder.totalAmount : finalTotal;
 
             const now = new Date();
             const formattedDateTime = now.toLocaleString('vi-VN', {
@@ -103,14 +118,14 @@ export default function CheckoutPage() {
             });
 
             const invoiceInfo: InvoiceData = {
-                orderId: orderId,
+                orderId: resolvedOrderId,
                 orderDate: formattedDateTime,
                 email: email,
                 items: cartItems.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
                 subtotal: cartTotal,
                 discountAmount: appliedCoupon ? appliedCoupon.discountAmount : 0,
                 couponCode: appliedCoupon ? appliedCoupon.code : null,
-                totalAmount: finalTotal
+                totalAmount: resolvedTotal
             };
 
             setCreatedInvoice(invoiceInfo);
@@ -130,7 +145,7 @@ export default function CheckoutPage() {
             <div className="flex-1 flex flex-col items-center justify-center py-20 px-4 text-black">
                 <div className="bg-white p-10 rounded-[20px] shadow-[5px_5px_15px_#173B70] text-center max-w-md w-full border border-blue-900/10">
                     <img 
-                        src="/HINH_TRANG_CHU/giohang.jpg" 
+                        src={getValidMediaUrl('/HINH_TRANG_CHU/giohang.jpg')} 
                         alt="Giỏ hàng trống" 
                         className="w-24 h-24 object-contain mx-auto mb-4 rounded-xl"
                         onError={(e) => {
@@ -206,11 +221,11 @@ export default function CheckoutPage() {
                             <div className="w-20 h-20 sm:w-24 sm:h-24 bg-slate-50 rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-200 p-1">
                                 {item.imageUrl ? (
                                     <img 
-                                        src={item.imageUrl} 
+                                        src={getValidMediaUrl(item.imageUrl)} 
                                         alt={item.name} 
                                         className="w-full h-full object-contain" 
                                         onError={(e) => {
-                                            (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ipwworlkd.png';
+                                            (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/ipwworlkd.png');
                                         }}
                                     />
                                 ) : (

@@ -8,6 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import java.math.BigDecimal;
+
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,7 +29,7 @@ public class CouponApiTest extends BaseApiTest {
     void setUpCoupon() {
         sampleCoupon = new Coupon();
         sampleCoupon.setCode("KM_TEST_" + System.currentTimeMillis());
-        sampleCoupon.setDiscountAmount(50000.0);
+        sampleCoupon.setDiscountAmount(new BigDecimal("50000.00"));
         sampleCoupon.setQuantity(20);
         sampleCoupon.setActive(true);
         sampleCoupon = couponRepository.save(sampleCoupon);
@@ -37,7 +40,7 @@ public class CouponApiTest extends BaseApiTest {
     void testCreateCoupon_AdminSuccess() throws Exception {
         Coupon newCoupon = new Coupon();
         newCoupon.setCode("NEWYEAR" + System.currentTimeMillis());
-        newCoupon.setDiscountAmount(100000.0);
+        newCoupon.setDiscountAmount(new BigDecimal("100000.00"));
         newCoupon.setQuantity(50);
 
         mockMvc.perform(post("/api/coupons")
@@ -47,7 +50,7 @@ public class CouponApiTest extends BaseApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.active", is(true)))
-                .andExpect(jsonPath("$.discountAmount", is(100000.0)));
+                .andExpect(jsonPath("$.discountAmount", closeTo(100000.0, 0.01)));
     }
 
     @Test
@@ -55,7 +58,7 @@ public class CouponApiTest extends BaseApiTest {
     void testCreateCoupon_ClientForbidden() throws Exception {
         Coupon newCoupon = new Coupon();
         newCoupon.setCode("HACK_COUPON");
-        newCoupon.setDiscountAmount(999999.0);
+        newCoupon.setDiscountAmount(new BigDecimal("999999.00"));
 
         mockMvc.perform(post("/api/coupons")
                         .header("Authorization", "Bearer " + clientToken)
@@ -86,7 +89,7 @@ public class CouponApiTest extends BaseApiTest {
         mockMvc.perform(get("/api/coupons/validate/" + sampleCoupon.getCode()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is(sampleCoupon.getCode())))
-                .andExpect(jsonPath("$.discountAmount", is(50000.0)));
+                .andExpect(jsonPath("$.discountAmount", closeTo(50000.0, 0.01)));
     }
 
     @Test
@@ -101,7 +104,7 @@ public class CouponApiTest extends BaseApiTest {
     void testDeleteCoupon_AdminSuccess() throws Exception {
         Coupon c = new Coupon();
         c.setCode("XOA_MA_" + System.currentTimeMillis());
-        c.setDiscountAmount(20000.0);
+        c.setDiscountAmount(new BigDecimal("20000.00"));
         c.setQuantity(5);
         c.setActive(true);
         c = couponRepository.save(c);

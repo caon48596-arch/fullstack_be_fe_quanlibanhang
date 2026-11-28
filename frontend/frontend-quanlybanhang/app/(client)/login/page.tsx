@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { getUserRoleFromToken } from '@/util/fetchClient';
+import { getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import {
     authLayoutStyles,
     formStyles,
@@ -56,36 +56,37 @@ function LoginForm() {
             const cleanEmail = formData.email.trim();
             const password = formData.password;
 
-            // Ưu tiên đăng nhập trực tiếp; nếu không trả về token thì chuyển sang luồng OTP
-            let directToken: string | null = null;
-            let directUser: any = null;
-
+            // Đăng nhập trực tiếp qua Backend Spring Boot (Single Source of Truth)
+            let loginRes: Response | null = null;
             try {
-                let loginRes: Response | null = null;
-                try {
-                    loginRes = await fetch(`${apiBase}/users/login`, {
+                loginRes = await fetch(`${apiBase}/users/login`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: cleanEmail, password }),
+                });
+            } catch {
+                if (apiBase.includes('localhost')) {
+                    loginRes = await fetch('https://project1-production-6826.up.railway.app/api/users/login', {
                         method: 'POST',
+                        credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: cleanEmail, password }),
-                    });
-                } catch {
-                    if (apiBase.includes('localhost')) {
-                        loginRes = await fetch('https://project1-production-6826.up.railway.app/api/users/login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: cleanEmail, password }),
-                        }).catch(() => null);
-                    }
+                    }).catch(() => null);
                 }
-
-                if (loginRes && loginRes.ok) {
-                    const data = await loginRes.json().catch(() => ({}));
-                    directUser = data.data || data;
-                    directToken = directUser.token || directUser.accessToken;
-                }
-            } catch (directErr) {
-                console.warn('[Login] Thử đăng nhập trực tiếp không phản hồi:', directErr);
             }
+
+            if (!loginRes) {
+                throw new Error('Không thể kết nối đến máy chủ xác thực. Vui lòng thử lại sau!');
+            }
+
+            const loginData = await loginRes.json().catch(() => ({}));
+            if (!loginRes.ok) {
+                throw new Error(loginData.message || loginData.error || 'Sai tài khoản hoặc mật khẩu!');
+            }
+
+            const directUser = loginData.data || loginData;
+            const directToken = directUser.token || directUser.accessToken;
 
             if (directToken) {
                 sessionStorage.setItem('accessToken', directToken);
@@ -107,43 +108,21 @@ function LoginForm() {
                 return;
             }
 
+            // Nếu backend yêu cầu xác thực bước 2 (OTP), gửi yêu cầu OTP trực tiếp tới Spring Boot
+            const otpRes = await fetch(`${apiBase}/users/request-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: cleanEmail, type: 'LOGIN' }),
+            });
+            const otpData = await otpRes.json().catch(() => ({}));
+            if (!otpRes.ok) {
+                throw new Error(otpData.message || otpData.error || 'Không thể gửi mã OTP xác thực.');
+            }
+
             sessionStorage.setItem('pendingAuthData', JSON.stringify({
                 email: cleanEmail,
                 password: password,
             }));
-
-            let otpSent = false;
-            try {
-                const nextRes = await fetch('/api/auth/otp/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: cleanEmail, type: 'LOGIN' }),
-                });
-                const nextData = await nextRes.json().catch(() => ({}));
-                if (nextRes.ok && nextData.success) {
-                    otpSent = true;
-                    if (nextData.otpSessionToken) {
-                        sessionStorage.setItem('pendingOtpSession', nextData.otpSessionToken);
-                    }
-                }
-            } catch (nextErr) {
-                console.warn('[Login] Đang kết nối dự phòng sang Backend:', nextErr);
-            }
-
-            // Fallback sang Backend nếu Next.js API không gửi được OTP
-            if (!otpSent) {
-                const response = await fetch(`${apiBase}/users/request-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: cleanEmail, type: 'LOGIN' }),
-                });
-
-                const data = await response.json().catch(() => ({}));
-
-                if (!response.ok && response.status !== 404) {
-                    throw new Error(data.message || data.error || 'Email hoặc số điện thoại không tồn tại trong hệ thống!');
-                }
-            }
 
             const targetUrl = '/verify-otp?action=login' + (redirectUrl ? `&redirect=${encodeURIComponent(redirectUrl)}` : '');
             router.push(targetUrl);
@@ -159,10 +138,10 @@ function LoginForm() {
             <div className={authLayoutStyles.container}>
                 <div className={authLayoutStyles.logoWrapper}>
                     <img
-                        src="/HINH_TRANG_CHU/logo_dang nhap.png"
+                        src={getValidMediaUrl('/HINH_TRANG_CHU/logo_dang nhap.png')}
                         alt="IPWORLD Logo"
                         className={authLayoutStyles.logoImage}
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/logo2.jpg'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/logo2.jpg'); }}
                     />
                     <h2 className={authLayoutStyles.logoText} style={{ textShadow: '2px 3px 8px #173B70' }}>
                         IPWORLD

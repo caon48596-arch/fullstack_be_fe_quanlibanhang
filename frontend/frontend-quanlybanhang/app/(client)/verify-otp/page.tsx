@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, Mail, KeyRound, RefreshCw, ArrowLeft } from 'lucide-react';
-import { getUserRoleFromToken } from '@/util/fetchClient';
+import { getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import {
     authLayoutStyles,
     formStyles,
@@ -29,7 +29,6 @@ function VerifyOtpContent() {
         'Mã xác thực OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.',
     );
     const [authData, setAuthData]               = useState<any>(null);
-    const [otpSessionToken, setOtpSessionToken] = useState<string>('');
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
     const isRegister = action === 'register';
@@ -37,10 +36,6 @@ function VerifyOtpContent() {
     useEffect(() => {
         try {
             const stored = sessionStorage.getItem('pendingAuthData');
-            const storedSession = sessionStorage.getItem('pendingOtpSession');
-            if (storedSession) {
-                setOtpSessionToken(storedSession);
-            }
             if (stored) {
                 const parsed = JSON.parse(stored);
                 setAuthData(parsed);
@@ -60,6 +55,27 @@ function VerifyOtpContent() {
         }
     }, [cooldown]);
 
+    const postBackend = async (path: string, payload: Record<string, unknown>): Promise<Response> => {
+        try {
+            return await fetch(`${apiBase}${path}`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        } catch (err) {
+            if (apiBase.includes('localhost')) {
+                return await fetch(`https://project1-production-6826.up.railway.app/api${path}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+            }
+            throw err;
+        }
+    };
+
     const handleRequestOtp = async () => {
         if (!identifier) {
             setError('Không tìm thấy thông tin email.');
@@ -71,46 +87,16 @@ function VerifyOtpContent() {
         setSuccessMessage(null);
 
         try {
-            let sentSuccessfully = false;
-            try {
-                const resendRes = await fetch('/api/auth/otp/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: identifier,
-                        type: isRegister ? 'REGISTER' : 'LOGIN',
-                    }),
-                });
-                const resendData = await resendRes.json().catch(() => ({}));
-                if (resendRes.ok && resendData.success) {
-                    sentSuccessfully = true;
-                    if (resendData.otpSessionToken) {
-                        setOtpSessionToken(resendData.otpSessionToken);
-                        sessionStorage.setItem('pendingOtpSession', resendData.otpSessionToken);
-                    }
-                    setSuccessMessage('Mã xác thực OTP mới đã được gửi đến email của bạn.');
-                    setCooldown(60);
-                }
-            } catch (err) {
-                console.warn('[VerifyOtp] Chuyển đổi phương thức gửi dự phòng:', err);
-            }
+            const response = await postBackend('/users/request-otp', {
+                email: identifier,
+                type: isRegister ? 'REGISTER' : 'LOGIN',
+            });
 
-            if (!sentSuccessfully) {
-                const response = await fetch(`${apiBase}/users/request-otp`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: identifier,
-                        type: isRegister ? 'REGISTER' : 'LOGIN',
-                    }),
-                });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || data.error || 'Không thể gửi lại mã OTP.');
 
-                const data = await response.json().catch(() => ({}));
-                if (!response.ok) throw new Error(data.message || data.error || 'Không thể gửi lại mã OTP.');
-
-                setSuccessMessage(data.message || 'Mã OTP mới đã được gửi đến email của bạn!');
-                setCooldown(60);
-            }
+            setSuccessMessage(data.message || 'Mã OTP mới đã được gửi đến email của bạn!');
+            setCooldown(60);
         } catch (err: any) {
             setError(err.message || 'Lỗi kết nối máy chủ.');
         } finally {
@@ -130,68 +116,32 @@ function VerifyOtpContent() {
 
         try {
             if (isRegister) {
-                const response = await fetch(`${apiBase}/users/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...authData, email: identifier, otp: otp.trim() }),
+                const response = await postBackend('/users/register', {
+                    ...authData,
+                    email: identifier,
+                    otp: otp.trim(),
                 });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(data.message || data.error || 'Đăng ký thất bại!');
 
                 alert('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
                 sessionStorage.removeItem('pendingAuthData');
-                sessionStorage.removeItem('pendingOtpSession');
                 router.push('/login');
             } else {
-                let verified = false;
-                let token = null;
+                const response = await postBackend('/users/login-otp', {
+                    email: identifier,
+                    password: authData?.password,
+                    otp: otp.trim(),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.message || data.error || 'Mã OTP không chính xác hoặc đã hết hạn!');
 
-                try {
-                    const verifyRes = await fetch('/api/auth/otp/verify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            email: identifier,
-                            otp: otp.trim(),
-                            password: authData?.password,
-                            otpSessionToken,
-                        }),
-                    });
-
-                    const verifyData = await verifyRes.json().catch(() => ({}));
-
-                    if (verifyRes.ok && verifyData.success) {
-                        verified = true;
-                        token = verifyData.token;
-                    } else if (verifyRes.status === 400 && verifyData.message) {
-                        throw new Error(verifyData.message);
-                    }
-                } catch (verifyErr: any) {
-                    if (verifyErr.message && !verifyErr.message.includes('fetch')) {
-                        throw verifyErr;
-                    }
-                    console.warn('[VerifyOtp] Fallback sang Backend verify:', verifyErr);
-                }
-
-                // Nếu chưa xác thực qua Next.js API, fallback sang Backend
-                if (!verified) {
-                    const response = await fetch(`${apiBase}/users/login-otp`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: identifier, password: authData?.password, otp: otp.trim() }),
-                    });
-                    const data = await response.json().catch(() => ({}));
-                    if (!response.ok) throw new Error(data.message || data.error || 'Mã OTP không chính xác hoặc đã hết hạn!');
-
-                    token = data?.data?.token ?? data?.token;
-                }
-
+                const token = data?.data?.token ?? data?.token;
                 if (!token) throw new Error('Không nhận được mã xác thực (Token) từ máy chủ.');
 
                 sessionStorage.setItem('accessToken', token);
                 localStorage.setItem('accessToken', token);
                 sessionStorage.removeItem('pendingAuthData');
-                sessionStorage.removeItem('pendingOtpSession');
 
                 const role = getUserRoleFromToken();
                 const isAdmin = role === 'ROLE_ADMIN' || role === 'ADMIN';
@@ -226,10 +176,10 @@ function VerifyOtpContent() {
             <div className={authLayoutStyles.container}>
                 <div className={authLayoutStyles.logoWrapper}>
                     <img
-                        src="/HINH_TRANG_CHU/logo_dang nhap.png"
+                        src={getValidMediaUrl('/HINH_TRANG_CHU/logo_dang nhap.png')}
                         alt="IPWORLD Logo"
                         className={authLayoutStyles.logoImage}
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/logo2.jpg'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/logo2.jpg'); }}
                     />
                     <h2 className={authLayoutStyles.logoText} style={{ textShadow: '2px 3px 8px #173B70' }}>
                         IPWORLD

@@ -20,75 +20,140 @@ export interface Product {
     [key: string]: any;
 }
 
-const STORAGE_KEY_PRODUCTS = 'ipworld_products_cache';
+export interface PagedProductQuery {
+    page?: number;
+    size?: number;
+    categoryId?: number | null;
+    keyword?: string;
+    minPrice?: number | null;
+    maxPrice?: number | null;
+    sort?: 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
+}
+
+export interface PagedProductResponse {
+    content: Product[];
+    number: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    first: boolean;
+    last: boolean;
+}
+
 const EVENT_NAME = 'ipworld_products_updated';
-const LEGACY_FAKE_IDS = [12, 13, 14, 15, 16, 17, 18];
+const STORAGE_SYNC_KEY = 'ipworld_products_sync_ts';
+const LEGACY_CACHE_KEY = 'ipworld_products_cache';
+const CACHE_TTL_MS = 30_000;
 
 export const INITIAL_CATALOG: Product[] = [];
 
-// Loại bỏ sản phẩm mẫu cũ (ID 12-18 hoặc >= 1000) còn sót trong localStorage
-const isValidRealProduct = (p: Product) =>
-    Boolean(p.id) && !LEGACY_FAKE_IDS.includes(p.id) && p.id < 1000;
-
-const cleanLegacyFakeProducts = () => {
-    if (typeof window === 'undefined') return;
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-        if (raw) {
-            const list: Product[] = JSON.parse(raw);
-            if (Array.isArray(list)) {
-                const cleaned = list.filter(isValidRealProduct);
-                if (cleaned.length !== list.length) {
-                    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(cleaned));
-                }
-            }
-        }
-    } catch {}
-};
+// In-memory TTL cache thay vì lưu toàn bộ catalog vào localStorage (giới hạn ~5MB)
+let memoryProductsCache: { data: Product[]; expiresAt: number } | null = null;
 
 if (typeof window !== 'undefined') {
-    cleanLegacyFakeProducts();
+    try {
+        // Dọn dẹp key cache cũ để giải phóng localStorage
+        localStorage.removeItem(LEGACY_CACHE_KEY);
+    } catch {}
 }
 
 export const broadcastProductChange = (action: 'create' | 'update' | 'delete', data?: any) => {
+    memoryProductsCache = null;
     if (typeof window === 'undefined') return;
     try {
         window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { action, data, timestamp: Date.now() } }));
+        // Chỉ ghi timestamp rất nhẹ để thông báo cross-tab thay vì serialize cả catalog
+        localStorage.setItem(STORAGE_SYNC_KEY, String(Date.now()));
     } catch (e) {
         console.error('[productService] Lỗi broadcast:', e);
     }
 };
 
+function paginateAndFilterClientFallback(all: Product[], query: PagedProductQuery): PagedProductResponse {
+    const page = Math.max(0, query.page ?? 0);
+    const size = Math.max(1, query.size ?? 12);
+    const keyword = query.keyword?.trim().toLowerCase() || '';
+
+    let filtered = all.filter(p => {
+        if (query.categoryId != null && p.category?.id !== query.categoryId) return false;
+        if (keyword && !p.name?.toLowerCase().includes(keyword)) return false;
+        const price = p.price || 0;
+        if (query.minPrice != null && price < query.minPrice) return false;
+        if (query.maxPrice != null && price > query.maxPrice) return false;
+        return true;
+    });
+
+    filtered = [...filtered].sort((a, b) => {
+        if (query.sort === 'price-asc') return (a.price || 0) - (b.price || 0);
+        if (query.sort === 'price-desc') return (b.price || 0) - (a.price || 0);
+        if (query.sort === 'name-asc') return (a.name || '').localeCompare(b.name || '');
+        return (b.id || 0) - (a.id || 0);
+    });
+
+    const totalElements = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalElements / size));
+    const start = page * size;
+    const content = filtered.slice(start, start + size);
+
+    return {
+        content,
+        number: page,
+        size,
+        totalElements,
+        totalPages,
+        first: page === 0,
+        last: page >= totalPages - 1,
+    };
+}
+
 export const productService = {
-    async getAllProducts(): Promise<Product[]> {
+    async getPagedProducts(query: PagedProductQuery = {}): Promise<PagedProductResponse> {
+        const params = new URLSearchParams();
+        params.set('page', String(Math.max(0, query.page ?? 0)));
+        params.set('size', String(Math.max(1, query.size ?? 12)));
+        if (query.categoryId != null) params.set('categoryId', String(query.categoryId));
+        if (query.keyword && query.keyword.trim()) params.set('keyword', query.keyword.trim());
+        if (query.minPrice != null) params.set('minPrice', String(query.minPrice));
+        if (query.maxPrice != null) params.set('maxPrice', String(query.maxPrice));
+        if (query.sort) params.set('sort', query.sort);
+
+        try {
+            const res = await fetchClient(`/products/paged?${params.toString()}`);
+            if (res && Array.isArray(res.content)) {
+                return {
+                    content: res.content,
+                    number: res.number ?? (query.page ?? 0),
+                    size: res.size ?? (query.size ?? 12),
+                    totalElements: res.totalElements ?? res.content.length,
+                    totalPages: Math.max(1, res.totalPages ?? 1),
+                    first: Boolean(res.first ?? (query.page ?? 0) === 0),
+                    last: Boolean(res.last ?? true),
+                };
+            }
+        } catch (err: any) {
+            console.warn('[productService] Endpoint /products/paged chưa sẵn sàng, fallback sang /products:', err.message);
+        }
+
+        const all = await this.getAllProducts();
+        return paginateAndFilterClientFallback(all, query);
+    },
+
+    async getAllProducts(forceRefresh = false): Promise<Product[]> {
+        if (!forceRefresh && memoryProductsCache && memoryProductsCache.expiresAt > Date.now()) {
+            return memoryProductsCache.data;
+        }
+
         try {
             const data = await fetchClient('/products');
             if (Array.isArray(data)) {
-                // Lưu cache cục bộ để fallback khi mất kết nối backend
-                if (typeof window !== 'undefined') {
-                    try {
-                        localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(data));
-                    } catch {}
-                }
+                memoryProductsCache = { data, expiresAt: Date.now() + CACHE_TTL_MS };
                 return data;
             }
         } catch (err: any) {
-            console.warn('[productService] Không thể kết nối backend để tải sản phẩm, thử đọc cache cục bộ:', err.message);
+            console.warn('[productService] Không thể kết nối backend để tải sản phẩm:', err.message);
         }
 
-        if (typeof window !== 'undefined') {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (Array.isArray(parsed)) {
-                        return parsed.filter(isValidRealProduct);
-                    }
-                }
-            } catch {}
-        }
-
-        return [];
+        return memoryProductsCache?.data ?? [];
     },
 
     async getProductsByCategory(categoryNameOrSlug: string, aliases: string[] = []): Promise<Product[]> {
@@ -100,11 +165,10 @@ export const productService = {
             const prodName = p.name?.toLowerCase().trim() || '';
             const desc = p.description?.toLowerCase().trim() || '';
 
-            if (searchTerms.some(term => catName.includes(term) || term.includes(catName))) {
+            if (catName && searchTerms.some(term => catName.includes(term) || term.includes(catName))) {
                 return true;
             }
 
-            // Fallback khớp theo từ khóa nếu sản phẩm chưa được gắn danh mục chuẩn
             const slug = categoryNameOrSlug.toLowerCase();
             if (slug.includes('dien-thoai') || slug.includes('phone')) {
                 return prodName.includes('iphone') || prodName.includes('điện thoại') || prodName.includes('galaxy') || desc.includes('smartphone');
@@ -131,18 +195,6 @@ export const productService = {
 
     async deleteProduct(id: number, name?: string): Promise<boolean> {
         await fetchClient(`/products/${id}`, { method: 'DELETE' });
-
-        if (typeof window !== 'undefined') {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-                if (raw) {
-                    const list: Product[] = JSON.parse(raw);
-                    const updated = list.filter(p => p.id !== id);
-                    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(updated));
-                }
-            } catch {}
-        }
-
         broadcastProductChange('delete', { id, name });
         return true;
     },
@@ -173,15 +225,6 @@ export const productService = {
             throw new Error('Lỗi: Máy chủ không trả về thông tin sản phẩm sau khi lưu vào database.');
         }
 
-        if (typeof window !== 'undefined') {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-                const current: Product[] = raw ? JSON.parse(raw) : [];
-                const next = [savedProduct, ...current.filter(p => p.id !== savedProduct.id)];
-                localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(next));
-            } catch {}
-        }
-
         broadcastProductChange('create', savedProduct);
         return savedProduct;
     },
@@ -202,17 +245,6 @@ export const productService = {
             throw new Error('Lỗi: Không thể cập nhật sản phẩm trong database.');
         }
 
-        if (typeof window !== 'undefined') {
-            try {
-                const raw = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-                if (raw) {
-                    const current: Product[] = JSON.parse(raw);
-                    const next = current.map(p => (p.id === id ? { ...p, ...updated } : p));
-                    localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(next));
-                }
-            } catch {}
-        }
-
         broadcastProductChange('update', updated);
         return updated;
     },
@@ -220,16 +252,24 @@ export const productService = {
     subscribe(callback: () => void): () => void {
         if (typeof window === 'undefined') return () => {};
 
-        const handler = () => {
+        const handleCustom = () => {
+            memoryProductsCache = null;
             callback();
         };
 
-        window.addEventListener(EVENT_NAME, handler);
-        window.addEventListener('storage', handler);
+        const handleStorage = (event: StorageEvent) => {
+            if (event.key === STORAGE_SYNC_KEY) {
+                memoryProductsCache = null;
+                callback();
+            }
+        };
+
+        window.addEventListener(EVENT_NAME, handleCustom);
+        window.addEventListener('storage', handleStorage);
 
         return () => {
-            window.removeEventListener(EVENT_NAME, handler);
-            window.removeEventListener('storage', handler);
+            window.removeEventListener(EVENT_NAME, handleCustom);
+            window.removeEventListener('storage', handleStorage);
         };
     },
 };

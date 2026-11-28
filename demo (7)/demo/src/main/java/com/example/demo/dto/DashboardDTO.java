@@ -5,16 +5,19 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class DashboardDTO {
-    private Double totalRevenue;
+    private BigDecimal totalRevenue;
     private Long newOrders;
     private Long totalProducts;
     private Long totalCustomers;
-    
-    private java.util.List<DailyRevenue> dailyRevenue;
-    private java.util.List<com.example.demo.entity.Order> recentOrders;
+
+    private List<DailyRevenueDTO> dailyRevenue;
+    private List<com.example.demo.entity.Order> recentOrders;
 }

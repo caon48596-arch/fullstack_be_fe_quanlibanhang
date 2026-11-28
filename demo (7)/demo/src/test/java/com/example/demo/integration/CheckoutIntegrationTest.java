@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,7 +67,7 @@ public class CheckoutIntegrationTest {
         Product product = new Product();
         product.setName("Điện thoại");
         product.setStock(10);
-        product.setPrice(5000.0);
+        product.setPrice(new BigDecimal("5000.00"));
         product.setCategory(category);
         productRepository.save(product);
 
@@ -100,7 +101,7 @@ public class CheckoutIntegrationTest {
         Product product = new Product();
         product.setName("Laptop Test");
         product.setStock(5);
-        product.setPrice(10000.0);
+        product.setPrice(new BigDecimal("10000.00"));
         product.setCategory(category);
         productRepository.save(product);
 
@@ -129,7 +130,7 @@ public class CheckoutIntegrationTest {
         Product product = new Product();
         product.setName("Sản phẩm ít hàng");
         product.setStock(2);
-        product.setPrice(300.0);
+        product.setPrice(new BigDecimal("300.00"));
         product.setCategory(category);
         productRepository.save(product);
 

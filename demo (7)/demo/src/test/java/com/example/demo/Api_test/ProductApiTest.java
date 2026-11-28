@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,7 +39,7 @@ public class ProductApiTest extends BaseApiTest {
 
         sampleProduct = new Product();
         sampleProduct.setName("Sản Phẩm Test Service");
-        sampleProduct.setPrice(250000.0);
+        sampleProduct.setPrice(new BigDecimal("250000.00"));
         sampleProduct.setStock(30);
         sampleProduct.setCategory(sampleCategory);
         sampleProduct = productRepository.save(sampleProduct);
@@ -59,7 +60,7 @@ public class ProductApiTest extends BaseApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(sampleProduct.getId().intValue())))
                 .andExpect(jsonPath("$.name", is(sampleProduct.getName())))
-                .andExpect(jsonPath("$.price", is(250000.0)));
+                .andExpect(jsonPath("$.price", closeTo(250000.0, 0.01)));
     }
 
     @Test
@@ -82,7 +83,7 @@ public class ProductApiTest extends BaseApiTest {
     void testCreateProduct_AdminSuccess() throws Exception {
         Map<String, Object> body = new HashMap<>();
         body.put("name", "Tai Nghe Gaming Chống Ồn");
-        body.put("price", 1200000.0);
+        body.put("price", new BigDecimal("1200000.00"));
         body.put("stock", 15);
         body.put("category", Map.of("id", sampleCategory.getId()));
 
@@ -101,7 +102,7 @@ public class ProductApiTest extends BaseApiTest {
     void testCreateProduct_ClientForbidden() throws Exception {
         Map<String, Object> body = Map.of(
                 "name", "Sản Phẩm Lậu",
-                "price", 100.0
+                "price", new BigDecimal("100.00")
         );
 
         mockMvc.perform(post("/api/products")
@@ -116,7 +117,7 @@ public class ProductApiTest extends BaseApiTest {
     void testUpdateProduct_AdminSuccess() throws Exception {
         Map<String, Object> body = Map.of(
                 "name", "Sản Phẩm Đã Được Cập Nhật",
-                "price", 299000.0,
+                "price", new BigDecimal("299000.00"),
                 "stock", 50
         );
 
@@ -126,16 +127,16 @@ public class ProductApiTest extends BaseApiTest {
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name", is("Sản Phẩm Đã Được Cập Nhật")))
-                .andExpect(jsonPath("$.price", is(299000.0)))
+                .andExpect(jsonPath("$.price", closeTo(299000.0, 0.01)))
                 .andExpect(jsonPath("$.stock", is(50)));
     }
 
     @Test
-    @DisplayName("DELETE /api/products/{id} - ADMIN xóa sản phẩm (Trả về 204 No Content)")
+    @DisplayName("DELETE /api/products/{id} - ADMIN xóa mềm sản phẩm (Soft Delete, trả về 204)")
     void testDeleteProduct_AdminSuccess() throws Exception {
         Product p = new Product();
         p.setName("Sản phẩm cần xóa ngay");
-        p.setPrice(50000.0);
+        p.setPrice(new BigDecimal("50000.00"));
         p.setStock(2);
         p = productRepository.save(p);
 
@@ -143,7 +144,26 @@ public class ProductApiTest extends BaseApiTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isNoContent());
 
-        assertTrue(productRepository.findById(p.getId()).isEmpty());
+        Product softDeleted = productRepository.findById(p.getId()).orElseThrow();
+        assertTrue(softDeleted.isDeleted());
+        assertTrue(productRepository.findByIdAndDeletedFalse(p.getId()).isEmpty());
+
+        mockMvc.perform(get("/api/products/" + p.getId()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /api/products/paged - Phân trang và lọc sản phẩm phía server")
+    void testGetPagedProducts_WithFilters() throws Exception {
+        mockMvc.perform(get("/api/products/paged")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .param("categoryId", sampleCategory.getId().toString())
+                        .param("keyword", "Test")
+                        .param("sort", "price-asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", not(empty())))
+                .andExpect(jsonPath("$.totalElements", greaterThanOrEqualTo(1)));
     }
 
     @Test

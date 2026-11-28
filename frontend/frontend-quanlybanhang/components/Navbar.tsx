@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { getUserRoleFromToken, getUserNameFromToken } from '@/util/fetchClient';
+import { resolveMediaUrl } from '@/util/mediaUrl';
 import {
     navbarStyles,
     modalStyles,
@@ -70,16 +71,25 @@ export default function Navbar() {
         setIsMobileMenuOpen(false);
     };
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         try {
+            const token = sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken');
+            // Thu hồi Access Token trên Redis Blacklist & xóa HttpOnly Refresh Cookie phía Backend
+            await fetch(`${apiBase}/users/logout`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+            }).catch(() => {});
+        } finally {
             sessionStorage.removeItem('accessToken');
             localStorage.removeItem('accessToken');
             setIsLoggedIn(false);
             setUserRole(null);
             setUserName(null);
             router.push('/login');
-        } catch (err) {
-            console.error('[Navbar] Lỗi đăng xuất:', err);
         }
     };
 
@@ -160,10 +170,10 @@ export default function Navbar() {
                 <div className={navbarStyles.leftGroup}>
                     <Link href="/" title="Về trang chủ IPWORLD" className={navbarStyles.logoLink}>
                         <img
-                            src="/HINH_TRANG_CHU/logo2.jpg"
+                            src={resolveMediaUrl('/HINH_TRANG_CHU/logo2.jpg')}
                             alt="IPWORLD Logo"
                             className={navbarStyles.logoImg}
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ip.jpg'; }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = resolveMediaUrl('/HINH_TRANG_CHU/ip.jpg'); }}
                         />
                         <h1
                             className={navbarStyles.logoTitle}
@@ -241,10 +251,10 @@ export default function Navbar() {
                                                     <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0 p-1 flex items-center justify-center">
                                                         {item.imageUrl ? (
                                                             <img
-                                                                src={item.imageUrl}
+                                                                src={resolveMediaUrl(item.imageUrl)}
                                                                 alt={item.name}
                                                                 className="w-full h-full object-contain"
-                                                                onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ipwworlkd.png'; }}
+                                                                onError={(e) => { (e.target as HTMLImageElement).src = resolveMediaUrl('/HINH_TRANG_CHU/ipwworlkd.png'); }}
                                                             />
                                                         ) : (
                                                             <Package size={24} className="text-slate-400" />

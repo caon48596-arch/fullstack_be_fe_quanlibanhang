@@ -172,7 +172,7 @@ export default function ProductsPage() {
                                                 alt={product.name}
                                                 className="w-full h-full object-contain group-hover:scale-108 transition-transform duration-300"
                                                 onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ipwworlkd.png';
+                                                    (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/ipwworlkd.png');
                                                 }}
                                             />
                                         </div>

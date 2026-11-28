@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class OrderApiTest extends BaseApiTest {
 
         sampleProduct = new Product();
         sampleProduct.setName("Sản Phẩm Đặt Hàng API");
-        sampleProduct.setPrice(100000.0);
+        sampleProduct.setPrice(new BigDecimal("100000.00"));
         sampleProduct.setStock(20);
         sampleProduct.setCategory(category);
         sampleProduct = productRepository.save(sampleProduct);
@@ -58,7 +59,7 @@ public class OrderApiTest extends BaseApiTest {
         sampleOrder = new Order();
         sampleOrder.setUser(clientUser);
         sampleOrder.setOrderDate(LocalDateTime.now());
-        sampleOrder.setTotalAmount(200000.0);
+        sampleOrder.setTotalAmount(new BigDecimal("200000.00"));
         sampleOrder.setStatus("PENDING");
         sampleOrder = orderRepository.save(sampleOrder);
     }
@@ -80,6 +81,44 @@ public class OrderApiTest extends BaseApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code", is("200")))
                 .andExpect(jsonPath("$.data.id", notNullValue()));
+    }
+
+    @Test
+    @DisplayName("POST /api/orders/CreateAndSum - Idempotency-Key chống tạo đơn trùng lặp")
+    void testPlaceOrder_Idempotent_WithHeader() throws Exception {
+        String idempotencyKey = "test-idem-" + System.currentTimeMillis();
+        int stockBefore = sampleProduct.getStock();
+
+        Map<String, Object> body = Map.of(
+                "email", clientUser.getEmail(),
+                "items", List.of(
+                        Map.of("product", Map.of("id", sampleProduct.getId()), "quantity", 2)
+                )
+        );
+
+        String firstResponse = mockMvc.perform(post("/api/orders/CreateAndSum")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String secondResponse = mockMvc.perform(post("/api/orders/CreateAndSum")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long firstOrderId = objectMapper.readTree(firstResponse).path("data").path("id").asLong();
+        Long secondOrderId = objectMapper.readTree(secondResponse).path("data").path("id").asLong();
+
+        org.junit.jupiter.api.Assertions.assertEquals(firstOrderId, secondOrderId);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                stockBefore - 2,
+                productRepository.findById(sampleProduct.getId()).orElseThrow().getStock());
     }
 
     @Test
@@ -120,7 +159,8 @@ public class OrderApiTest extends BaseApiTest {
         mockMvc.perform(get("/api/orders/ReadOne/" + sampleOrder.getId())
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code", is("200")));
+                .andExpect(jsonPath("$.code", is("200")))
+                .andExpect(jsonPath("$.data.id", is(sampleOrder.getId().intValue())));
     }
 
     @Test
@@ -156,7 +196,7 @@ public class OrderApiTest extends BaseApiTest {
         item.setOrder(sampleOrder);
         item.setProduct(sampleProduct);
         item.setQuantity(2);
-        item.setPrice(100000.0);
+        item.setPrice(new BigDecimal("100000.00"));
         item.setStatus("PENDING");
         item = orderItemRepository.save(item);
 
@@ -174,7 +214,7 @@ public class OrderApiTest extends BaseApiTest {
         item.setOrder(sampleOrder);
         item.setProduct(sampleProduct);
         item.setQuantity(1);
-        item.setPrice(100000.0);
+        item.setPrice(new BigDecimal("100000.00"));
         item = orderItemRepository.save(item);
 
         Map<String, Object> body = Map.of("quantity", 5);
@@ -194,7 +234,7 @@ public class OrderApiTest extends BaseApiTest {
         item.setOrder(sampleOrder);
         item.setProduct(sampleProduct);
         item.setQuantity(1);
-        item.setPrice(100000.0);
+        item.setPrice(new BigDecimal("100000.00"));
         item = orderItemRepository.save(item);
 
         mockMvc.perform(delete("/api/order-items/" + item.getId())

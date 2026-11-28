@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -99,7 +100,7 @@ public class ProductIntegrationTest {
 
         Product product = new Product();
         product.setName("MacBook Pro");
-        product.setPrice(50000000.0);
+        product.setPrice(new BigDecimal("50000000.00"));
         product.setCategory(category);
         productRepository.save(product);
 
@@ -145,7 +146,7 @@ public class ProductIntegrationTest {
 
         Product product = new Product();
         product.setName("Sản phẩm cũ");
-        product.setPrice(100000.0);
+        product.setPrice(new BigDecimal("100000.00"));
         product.setStock(5);
         product.setCategory(category);
         productRepository.save(product);
@@ -154,7 +155,7 @@ public class ProductIntegrationTest {
 
         String requestBody = "{"
                 + "\"name\":\"Sản phẩm đã cập nhật\","
-                + "\"price\":250000.0"
+                + "\"price\":250000.00"
                 + "}";
 
         mockMvc.perform(put("/api/products/" + product.getId())
@@ -164,7 +165,7 @@ public class ProductIntegrationTest {
                 .andExpect(status().isOk());
 
         Product updated = productRepository.findById(product.getId()).orElseThrow();
-        assertEquals(250000.0, updated.getPrice());
+        assertEquals(0, new BigDecimal("250000.00").compareTo(updated.getPrice()));
         assertEquals("Sản phẩm đã cập nhật", updated.getName());
     }
 
@@ -173,7 +174,7 @@ public class ProductIntegrationTest {
     void testAdminDeleteProduct_Success() throws Exception {
         Product product = new Product();
         product.setName("Sản phẩm cần xóa");
-        product.setPrice(99000.0);
+        product.setPrice(new BigDecimal("99000.00"));
         product.setStock(3);
         productRepository.save(product);
         Long productId = product.getId();
@@ -184,7 +185,8 @@ public class ProductIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
 
-        assertTrue(productRepository.findById(productId).isEmpty());
+        assertTrue(productRepository.findById(productId).orElseThrow().isDeleted());
+        assertTrue(productRepository.findByIdAndDeletedFalse(productId).isEmpty());
     }
 
     @Test
@@ -206,7 +208,7 @@ public class ProductIntegrationTest {
     void testClientDeleteProduct_ShouldReturnForbidden() throws Exception {
         Product product = new Product();
         product.setName("Sản phẩm không được phép xóa");
-        product.setPrice(50000.0);
+        product.setPrice(new BigDecimal("50000.00"));
         product.setStock(10);
         productRepository.save(product);
 

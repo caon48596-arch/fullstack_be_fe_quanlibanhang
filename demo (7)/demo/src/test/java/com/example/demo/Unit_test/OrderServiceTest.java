@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,6 +29,7 @@ import com.example.demo.entity.Order;
 import com.example.demo.entity.OrderItem;
 import com.example.demo.entity.Product;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ConflictException;
 import com.example.demo.service.OrderService;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,18 +66,18 @@ class OrderServiceTest {
         sampleProduct = new Product();
         sampleProduct.setId(10L);
         sampleProduct.setName("Bàn phím cơ");
-        sampleProduct.setPrice(100.0);
+        sampleProduct.setPrice(new BigDecimal("100.00"));
         sampleProduct.setStock(20);
 
         sampleItem = new OrderItem();
         sampleItem.setId(100L);
         sampleItem.setProduct(sampleProduct);
         sampleItem.setQuantity(2);
-        sampleItem.setPrice(100.0);
+        sampleItem.setPrice(new BigDecimal("100.00"));
     }
 
     @Test
-    @DisplayName("Đặt hàng thành công không có coupon")
+    @DisplayName("Đặt hàng thành công không có coupon (tính toán chuẩn BigDecimal)")
     void testPlaceOrder_Success_WithoutCoupon() {
         List<OrderItem> items = new ArrayList<>();
         items.add(sampleItem);
@@ -91,8 +94,10 @@ class OrderServiceTest {
         Order order = orderService.placeOrder(null, items, null, "buyer@example.com");
 
         assertNotNull(order);
-        assertEquals(200.0, order.getTotalAmount());
+        assertEquals(0, new BigDecimal("200.00").compareTo(order.getTotalAmount()));
         assertEquals("PENDING", order.getStatus());
+        assertEquals("UNPAID", order.getPaymentStatus());
+        assertNotNull(order.getExpiresAt());
         assertEquals(18, sampleProduct.getStock());
         assertEquals(sampleUser, order.getUser());
         verify(productRepository, times(1)).save(sampleProduct);
@@ -109,7 +114,7 @@ class OrderServiceTest {
         Coupon coupon = new Coupon();
         coupon.setId(5L);
         coupon.setCode("GIAM50");
-        coupon.setDiscountAmount(50.0);
+        coupon.setDiscountAmount(new BigDecimal("50.00"));
         coupon.setQuantity(10);
         coupon.setActive(true);
         coupon.setExpirationDate(LocalDateTime.now().plusDays(1));
@@ -123,7 +128,8 @@ class OrderServiceTest {
         Order order = orderService.placeOrder(null, items, "GIAM50", "buyer@example.com");
 
         assertNotNull(order);
-        assertEquals(150.0, order.getTotalAmount());
+        assertEquals(0, new BigDecimal("150.00").compareTo(order.getTotalAmount()));
+        assertEquals("GIAM50", order.getCouponCode());
         assertEquals(9, coupon.getQuantity());
         verify(couponRepository, times(1)).save(coupon);
     }
@@ -188,7 +194,7 @@ class OrderServiceTest {
         expiredCoupon.setCode("EXPIRED");
         expiredCoupon.setActive(true);
         expiredCoupon.setQuantity(5);
-        expiredCoupon.setDiscountAmount(20.0);
+        expiredCoupon.setDiscountAmount(new BigDecimal("20.00"));
         expiredCoupon.setExpirationDate(LocalDateTime.now().minusDays(1));
 
         when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct));
@@ -283,19 +289,32 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("Cập nhật trạng thái đơn hàng thành công")
+    @DisplayName("State Machine: Cập nhật trạng thái đơn hàng hợp lệ (PENDING -> SHIPPED)")
     void testUpdateOrderStatus_Success() {
         Order order = new Order();
         order.setId(1L);
         order.setStatus("PENDING");
 
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Order updated = orderService.updateOrderStatus(1L, "SHIPPED");
 
         assertEquals("SHIPPED", updated.getStatus());
         verify(orderRepository, times(1)).save(order);
+    }
+
+    @Test
+    @DisplayName("State Machine: Chặn chuyển trạng thái sai nghiệp vụ (CANCELLED -> PAID) bằng 409 Conflict")
+    void testUpdateOrderStatus_InvalidTransition_ThrowsConflict() {
+        Order order = new Order();
+        order.setId(1L);
+        order.setStatus("CANCELLED");
+
+        when(orderRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(ConflictException.class, () -> orderService.updateOrderStatus(1L, "PAID"));
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test
@@ -308,5 +327,73 @@ class OrderServiceTest {
 
         assertEquals("COMPLETED", updated.getStatus());
         verify(orderItemRepository, times(1)).save(sampleItem);
+    }
+
+    @Test
+    @DisplayName("Idempotency Key trùng lặp trả về đơn hàng đã tạo, không trừ kho lần 2")
+    void testPlaceOrder_IdempotencyKey_ReturnsExistingOrder() {
+        Order existing = new Order();
+        existing.setId(77L);
+        existing.setIdempotencyKey("idem-key-123");
+        existing.setTotalAmount(new BigDecimal("200.00"));
+
+        when(orderRepository.findByIdempotencyKey("idem-key-123")).thenReturn(Optional.of(existing));
+
+        Order result = orderService.placeOrder(List.of(sampleItem), null, "buyer@example.com", "idem-key-123");
+
+        assertEquals(77L, result.getId());
+        verify(productRepository, never()).findByIdForUpdate(any());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    @DisplayName("Chống Deadlock: luôn khóa sản phẩm theo thứ tự productId tăng dần")
+    void testPlaceOrder_LocksProductsInAscendingIdOrder() {
+        Product p5 = new Product();
+        p5.setId(5L);
+        p5.setName("Chuột");
+        p5.setPrice(new BigDecimal("50.00"));
+        p5.setStock(10);
+
+        Product p20 = new Product();
+        p20.setId(20L);
+        p20.setName("Màn hình");
+        p20.setPrice(new BigDecimal("300.00"));
+        p20.setStock(10);
+
+        OrderItem item20 = new OrderItem();
+        item20.setProduct(p20);
+        item20.setQuantity(1);
+
+        OrderItem item5 = new OrderItem();
+        item5.setProduct(p5);
+        item5.setQuantity(2);
+
+        when(userRepository.findByEmail("buyer@example.com")).thenReturn(Optional.of(sampleUser));
+        when(productRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(p5));
+        when(productRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(p20));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderItemRepository.save(any(OrderItem.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Client truyền ngược [20, 5]
+        Order order = orderService.placeOrder(List.of(item20, item5), null, "buyer@example.com", null);
+
+        assertEquals(0, new BigDecimal("400.00").compareTo(order.getTotalAmount()));
+        InOrder inOrder = inOrder(productRepository);
+        inOrder.verify(productRepository).findByIdForUpdate(5L);
+        inOrder.verify(productRepository).findByIdForUpdate(20L);
+    }
+
+    @Test
+    @DisplayName("Đặt hàng thất bại nếu sản phẩm đã bị xóa mềm (Soft Delete)")
+    void testPlaceOrder_DeletedProduct_ThrowsException() {
+        sampleProduct.setDeleted(true);
+        when(productRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(sampleProduct));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
+                orderService.placeOrder(List.of(sampleItem), null, "buyer@example.com", null));
+
+        assertTrue(ex.getMessage().contains("ngừng kinh doanh"));
+        verify(orderRepository, never()).save(any(Order.class));
     }
 }

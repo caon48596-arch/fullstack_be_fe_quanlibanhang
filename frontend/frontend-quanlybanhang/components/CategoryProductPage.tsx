@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { fetchClient, getUserRoleFromToken, getValidMediaUrl } from '@/util/fetchClient';
 import { productService, Product } from '@/util/productService';
@@ -12,6 +12,7 @@ import {
     Search,
     Filter,
     ArrowUpDown,
+    ChevronLeft,
     ChevronRight,
     Home,
     X,
@@ -26,10 +27,25 @@ interface CategoryProductPageProps {
     bannerImage: string;
     videoUrl?: string;
     icon?: React.ReactNode;
+    initialCategoryId?: number | null;
+    initialProducts?: Product[];
+    initialTotalElements?: number;
+    initialTotalPages?: number;
 }
 
 type PriceRange = 'all' | 'under5' | '5to15' | '15to30' | 'above30';
 type SortBy = 'newest' | 'price-asc' | 'price-desc' | 'name-asc';
+const PAGE_SIZE = 12;
+
+function getPriceBounds(range: PriceRange): { minPrice: number | null; maxPrice: number | null } {
+    switch (range) {
+        case 'under5': return { minPrice: null, maxPrice: 4_999_999 };
+        case '5to15': return { minPrice: 5_000_000, maxPrice: 15_000_000 };
+        case '15to30': return { minPrice: 15_000_000, maxPrice: 30_000_000 };
+        case 'above30': return { minPrice: 30_000_001, maxPrice: null };
+        default: return { minPrice: null, maxPrice: null };
+    }
+}
 
 function getProductImageUrl(product: Product, fallback: string): string {
     return (
@@ -46,18 +62,29 @@ export default function CategoryProductPage({
     categoryAliases = [],
     bannerImage,
     videoUrl,
+    initialCategoryId = null,
+    initialProducts = [],
+    initialTotalElements = 0,
+    initialTotalPages = 1,
 }: CategoryProductPageProps) {
     const { addToCart } = useCart();
 
-    const [products, setProducts] = useState<Product[]>([]);
-    const [categoryId, setCategoryId] = useState<number | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [products, setProducts] = useState<Product[]>(initialProducts);
+    const [categoryId, setCategoryId] = useState<number | null>(initialCategoryId);
+    const [page, setPage] = useState<number>(0);
+    const [totalElements, setTotalElements] = useState<number>(
+        initialTotalElements || initialProducts.length
+    );
+    const [totalPages, setTotalPages] = useState<number>(Math.max(1, initialTotalPages));
+    const [isLoading, setIsLoading] = useState<boolean>(initialProducts.length === 0);
     const [userRole, setUserRole] = useState<string | null>(null);
 
     const [searchKeyword, setSearchKeyword] = useState<string>('');
+    const [debouncedKeyword, setDebouncedKeyword] = useState<string>('');
     const [priceRange, setPriceRange] = useState<PriceRange>('all');
     const [sortBy, setSortBy] = useState<SortBy>('newest');
 
+    const hasInitialSsrData = useRef<boolean>(initialProducts.length > 0);
     const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
     const [isSaving, setIsSaving] = useState<boolean>(false);
     const [newProduct, setNewProduct] = useState({
@@ -75,42 +102,26 @@ export default function CategoryProductPage({
     }, []);
 
     useEffect(() => {
-        loadProducts();
+        const timer = setTimeout(() => {
+            setDebouncedKeyword(searchKeyword.trim());
+            setPage(0);
+        }, 250);
+        return () => clearTimeout(timer);
+    }, [searchKeyword]);
 
-        // Đồng bộ lại danh sách khi sản phẩm thay đổi từ trang khác
-        const unsubscribe = productService.subscribe(loadProducts);
-
-        return () => {
-            unsubscribe();
-        };
-    }, [categorySlug, categoryName]);
-
-    const loadProducts = async () => {
-        setIsLoading(true);
-        try {
-            const items = await productService.getProductsByCategory(
-                categorySlug,
-                [categoryName, ...categoryAliases]
-            );
-            setProducts(items);
-        } catch (err) {
-            console.error('[CategoryProductPage] Lỗi tải sản phẩm:', err);
-            setProducts([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Tìm categoryId từ backend để gắn vào payload khi tạo sản phẩm mới
-    const resolveCategoryId = async (): Promise<number | null> => {
+    // Tìm categoryId từ backend để truy vấn phân trang server-side và gắn khi tạo sản phẩm mới
+    const resolveCategoryId = useCallback(async (): Promise<number | null> => {
+        if (categoryId != null) return categoryId;
         try {
             const categories = await fetchClient('/categories');
             const searchNames = [categoryName, ...categoryAliases].map(s => s.toLowerCase().trim());
 
-            const matched = categories.find((c: any) =>
-                searchNames.includes(c.name?.toLowerCase().trim()) ||
-                searchNames.some(sn => c.name?.toLowerCase().includes(sn))
-            );
+            const matched = Array.isArray(categories)
+                ? categories.find((c: any) =>
+                    searchNames.includes(c.name?.toLowerCase().trim()) ||
+                    searchNames.some(sn => c.name?.toLowerCase().includes(sn))
+                )
+                : null;
 
             if (matched?.id) {
                 setCategoryId(matched.id);
@@ -120,26 +131,76 @@ export default function CategoryProductPage({
             console.warn('[CategoryProductPage] Lỗi lấy danh mục:', err);
         }
         return null;
-    };
+    }, [categoryId, categoryName, categoryAliases]);
 
-    const filteredProducts = products
-        .filter(p => {
-            if (searchKeyword && !p.name?.toLowerCase().includes(searchKeyword.toLowerCase().trim())) {
-                return false;
+    const loadProducts = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const resolvedCatId = await resolveCategoryId();
+            const { minPrice, maxPrice } = getPriceBounds(priceRange);
+
+            if (resolvedCatId != null) {
+                const paged = await productService.getPagedProducts({
+                    page,
+                    size: PAGE_SIZE,
+                    categoryId: resolvedCatId,
+                    keyword: debouncedKeyword || undefined,
+                    minPrice,
+                    maxPrice,
+                    sort: sortBy,
+                });
+                setProducts(paged.content);
+                setTotalElements(paged.totalElements);
+                setTotalPages(Math.max(1, paged.totalPages));
+                return;
             }
-            const price = p.price || 0;
-            if (priceRange === 'under5' && price >= 5_000_000) return false;
-            if (priceRange === '5to15' && (price < 5_000_000 || price > 15_000_000)) return false;
-            if (priceRange === '15to30' && (price < 15_000_000 || price > 30_000_000)) return false;
-            if (priceRange === 'above30' && price <= 30_000_000) return false;
-            return true;
-        })
-        .sort((a, b) => {
-            if (sortBy === 'price-asc') return (a.price || 0) - (b.price || 0);
-            if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
-            if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-            return (b.id || 0) - (a.id || 0);
+
+            // Fallback nếu chưa ánh xạ được categoryId trong DB
+            const items = await productService.getProductsByCategory(
+                categorySlug,
+                [categoryName, ...categoryAliases]
+            );
+            const filtered = items
+                .filter(p => {
+                    if (debouncedKeyword && !p.name?.toLowerCase().includes(debouncedKeyword.toLowerCase())) return false;
+                    const price = p.price || 0;
+                    if (minPrice != null && price < minPrice) return false;
+                    if (maxPrice != null && price > maxPrice) return false;
+                    return true;
+                })
+                .sort((a, b) => {
+                    if (sortBy === 'price-asc') return (a.price || 0) - (b.price || 0);
+                    if (sortBy === 'price-desc') return (b.price || 0) - (a.price || 0);
+                    if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
+                    return (b.id || 0) - (a.id || 0);
+                });
+            setTotalElements(filtered.length);
+            setTotalPages(Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)));
+            setProducts(filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE));
+        } catch (err) {
+            console.error('[CategoryProductPage] Lỗi tải sản phẩm:', err);
+            setProducts([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [resolveCategoryId, page, priceRange, debouncedKeyword, sortBy, categorySlug, categoryName, categoryAliases]);
+
+    useEffect(() => {
+        if (hasInitialSsrData.current && page === 0 && !debouncedKeyword && priceRange === 'all' && sortBy === 'newest') {
+            hasInitialSsrData.current = false;
+            return;
+        }
+        loadProducts();
+    }, [loadProducts, page, debouncedKeyword, priceRange, sortBy]);
+
+    useEffect(() => {
+        const unsubscribe = productService.subscribe(() => {
+            loadProducts();
         });
+        return () => unsubscribe();
+    }, [loadProducts]);
+
+    const filteredProducts = products;
 
     const handleAddToCart = (product: Product) => {
         const imageUrl = getProductImageUrl(product, bannerImage);
@@ -232,10 +293,10 @@ export default function CategoryProductPage({
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-blue-50 border-2 border-[#173B70]/20 p-2 flex items-center justify-center shrink-0 shadow-inner">
                         <img
-                            src={bannerImage}
+                            src={getValidMediaUrl(bannerImage)}
                             alt={categoryName}
                             className="w-full h-full object-contain"
-                            onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/logo2.jpg'; }}
+                            onError={(e) => { (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/logo2.jpg'); }}
                         />
                     </div>
                     <div>
@@ -243,7 +304,7 @@ export default function CategoryProductPage({
                             {categoryName}
                         </h1>
                         <span className="inline-block mt-1 text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-[#173B70] border border-blue-200">
-                            {filteredProducts.length} sản phẩm
+                            {totalElements} sản phẩm
                         </span>
                     </div>
                 </div>
@@ -254,7 +315,7 @@ export default function CategoryProductPage({
                             autoPlay loop muted controls playsInline
                             className="w-full h-full max-h-[190px] object-cover"
                         >
-                            <source src={videoUrl} type="video/mp4" />
+                            <source src={getValidMediaUrl(videoUrl)} type="video/mp4" />
                             Trình duyệt của bạn không hỗ trợ thẻ video.
                         </video>
                     </div>
@@ -289,7 +350,10 @@ export default function CategoryProductPage({
                         <Filter size={15} className="text-[#173B70] shrink-0" />
                         <select
                             value={priceRange}
-                            onChange={(e) => setPriceRange(e.target.value as PriceRange)}
+                            onChange={(e) => {
+                                setPriceRange(e.target.value as PriceRange);
+                                setPage(0);
+                            }}
                             className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#173B70]"
                         >
                             <option value="all">Tất cả mức giá</option>
@@ -304,7 +368,10 @@ export default function CategoryProductPage({
                         <ArrowUpDown size={15} className="text-[#173B70] shrink-0" />
                         <select
                             value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value as SortBy)}
+                            onChange={(e) => {
+                                setSortBy(e.target.value as SortBy);
+                                setPage(0);
+                            }}
                             className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#173B70]"
                         >
                             <option value="newest">Mới nhất</option>
@@ -355,7 +422,7 @@ export default function CategoryProductPage({
                                             src={finalImage}
                                             alt={product.name}
                                             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                            onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ipwworlkd.png'; }}
+                                            onError={(e) => { (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/ipwworlkd.png'); }}
                                         />
                                     </div>
 
@@ -412,6 +479,28 @@ export default function CategoryProductPage({
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {!isLoading && totalPages > 1 && (
+                    <div className="mt-8 flex items-center justify-center gap-3">
+                        <button
+                            onClick={() => setPage(prev => Math.max(0, prev - 1))}
+                            disabled={page <= 0}
+                            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold border border-slate-300 text-[#173B70] hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            <ChevronLeft size={15} /> Trang trước
+                        </button>
+                        <span className="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg bg-slate-100">
+                            Trang {page + 1} / {totalPages}
+                        </span>
+                        <button
+                            onClick={() => setPage(prev => Math.min(totalPages - 1, prev + 1))}
+                            disabled={page >= totalPages - 1}
+                            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold border border-slate-300 text-[#173B70] hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            Trang sau <ChevronRight size={15} />
+                        </button>
                     </div>
                 )}
             </div>
@@ -506,7 +595,7 @@ export default function CategoryProductPage({
                                         {newProduct.videoUrl && (
                                             <div className="w-24 h-16 bg-black rounded border overflow-hidden flex items-center justify-center">
                                                 <video
-                                                    src={newProduct.videoUrl}
+                                                    src={getValidMediaUrl(newProduct.videoUrl)}
                                                     className="w-full h-full object-contain"
                                                     muted autoPlay loop
                                                 />

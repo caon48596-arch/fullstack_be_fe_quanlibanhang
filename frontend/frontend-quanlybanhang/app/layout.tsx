@@ -10,12 +10,11 @@ export const metadata: Metadata = {
   description: "Hệ thống mua sắm thiết bị công nghệ chính hãng IPWORLD - Điện thoại, Laptop, PC, Màn hình, Máy tính bảng, Phụ kiện",
   icons: {
     icon: [
-      { url: "/HINH_TRANG_CHU/ipwworlkd.png", href: "/HINH_TRANG_CHU/ipwworlkd.png" },
       { url: "/icon.png", href: "/icon.png" },
       { url: "/favicon.ico", href: "/favicon.ico" },
     ],
-    shortcut: "/HINH_TRANG_CHU/ipwworlkd.png",
-    apple: "/HINH_TRANG_CHU/ipwworlkd.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
 };
 

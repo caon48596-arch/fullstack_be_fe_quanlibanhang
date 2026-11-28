@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, ArrowLeft, Clock, CheckCircle, XCircle, FileText } from 'lucide-react';
-import { fetchClient, getUserNameFromToken } from '@/util/fetchClient';
+import { fetchClient, getUserNameFromToken, getValidMediaUrl } from '@/util/fetchClient';
 
 export default function MyOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -32,8 +32,18 @@ export default function MyOrdersPage() {
 
     const getStatusInfo = (status: string) => {
         switch (status) {
+            case 'PAID':
+                return { text: 'Đã Thanh Toán', color: 'text-blue-800 bg-blue-100 border-blue-300', icon: <CheckCircle size={16} className="text-blue-700" /> };
             case 'APPROVED':
-                return { text: 'Đã Duyệt', color: 'text-emerald-800 bg-emerald-100 border-emerald-300', icon: <CheckCircle size={16} className="text-emerald-700" /> };
+            case 'CONFIRMED':
+                return { text: 'Đã Xác Nhận', color: 'text-emerald-800 bg-emerald-100 border-emerald-300', icon: <CheckCircle size={16} className="text-emerald-700" /> };
+            case 'SHIPPING':
+            case 'SHIPPED':
+                return { text: 'Đang Giao Hàng', color: 'text-indigo-800 bg-indigo-100 border-indigo-300', icon: <Clock size={16} className="text-indigo-700" /> };
+            case 'COMPLETED':
+                return { text: 'Hoàn Thành', color: 'text-emerald-900 bg-emerald-200 border-emerald-400', icon: <CheckCircle size={16} className="text-emerald-800" /> };
+            case 'EXPIRED':
+                return { text: 'Hết Hạn TT', color: 'text-slate-700 bg-slate-200 border-slate-300', icon: <XCircle size={16} className="text-slate-600" /> };
             case 'CANCELLED':
                 return { text: 'Đã Hủy', color: 'text-red-800 bg-red-100 border-red-300', icon: <XCircle size={16} className="text-red-700" /> };
             default:
@@ -103,10 +113,10 @@ export default function MyOrdersPage() {
                                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 shrink-0 overflow-hidden p-1">
                                         {product.imageUrl || product.image_url ? (
                                             <img 
-                                                src={product.imageUrl || product.image_url} 
+                                                src={getValidMediaUrl(product.imageUrl || product.image_url)} 
                                                 alt={product.name} 
                                                 className="w-full h-full object-contain"
-                                                onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ipwworlkd.png'; }}
+                                                onError={(e) => { (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/ipwworlkd.png'); }}
                                             />
                                         ) : (
                                             <ShoppingBag className="w-6 h-6 text-[#173B70]" />

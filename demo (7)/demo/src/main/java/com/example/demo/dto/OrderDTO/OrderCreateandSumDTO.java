@@ -12,4 +12,5 @@ public class OrderCreateandSumDTO {
     private List<OrderItem> items;
     private String couponCode;
     private String email;
+    private String idempotencyKey;
 }

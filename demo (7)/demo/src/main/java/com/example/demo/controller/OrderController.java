@@ -1,131 +1,128 @@
 package com.example.demo.controller;
 
-import java.security.Principal;
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.dto.OrderDTO.OrderCreateandSumDTO;
+import com.example.demo.dto.ResponseDTO;
+import com.example.demo.entity.Order;
+import com.example.demo.entity.OrderItem;
+import com.example.demo.exception.BusinessException;
+import com.example.demo.exception.UnauthorizedException;
+import com.example.demo.service.contract.OrderItemOperations;
+import com.example.demo.service.contract.OrderOperations;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.demo.dto.OrderDTO.OrderCreateandSumDTO;
-import com.example.demo.dto.ResponseDTO;
-import com.example.demo.entity.Order;
-import com.example.demo.entity.OrderItem;
-import com.example.demo.service.OrderService;
+import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
+@RequiredArgsConstructor
 public class OrderController {
 
-    @Autowired
-    private OrderService orderService;
+    private final OrderOperations orderService;
+    private final OrderItemOperations orderItemService;
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null) return false;
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ADMIN".equals(a.getAuthority()));
+    }
 
     @PostMapping({"", "/CreateAndSum"})
-    public ResponseEntity<ResponseDTO<?>> createAndSum(
+    public ResponseEntity<ResponseDTO<Order>> createAndSum(
             @RequestBody OrderCreateandSumDTO orderCreateandSumDTO,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyHeader,
             Principal principal) {
-        try {
-            // Ưu tiên lấy email từ JWT Principal đã xác thực
-            String userEmail = (principal != null && principal.getName() != null)
-                    ? principal.getName()
-                    : orderCreateandSumDTO.getEmail();
+        String userEmail = (principal != null && principal.getName() != null)
+                ? principal.getName()
+                : orderCreateandSumDTO.getEmail();
 
-            if (userEmail == null || userEmail.trim().isEmpty()) {
-                return ResponseEntity.status(401).body(ResponseDTO.error("Quý khách vui lòng đăng nhập để thanh toán và tạo hóa đơn.", "401"));
-            }
-
-            Order savedOrder = orderService.placeOrder(
-                orderCreateandSumDTO.getId(), 
-                orderCreateandSumDTO.getItems(), 
-                orderCreateandSumDTO.getCouponCode(),
-                userEmail
-            );
-
-            return ResponseEntity.ok(ResponseDTO.success(savedOrder));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(ResponseDTO.error(e.getMessage() != null ? e.getMessage() : "Không thể tạo hóa đơn", "400"));
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            throw new UnauthorizedException("Quý khách vui lòng đăng nhập để thanh toán và tạo hóa đơn.");
         }
+
+        String idempotencyKey = (idempotencyHeader != null && !idempotencyHeader.isBlank())
+                ? idempotencyHeader
+                : orderCreateandSumDTO.getIdempotencyKey();
+
+        Order savedOrder = orderService.placeOrder(
+                orderCreateandSumDTO.getItems(),
+                orderCreateandSumDTO.getCouponCode(),
+                userEmail,
+                idempotencyKey
+        );
+
+        return ResponseEntity.ok(ResponseDTO.success(savedOrder));
     }
 
     @GetMapping("/my-orders")
     public ResponseEntity<List<Order>> getMyOrders(
             @RequestParam(required = false) String email,
             Principal principal) {
-        try {
-            // Ưu tiên lấy email từ JWT Principal đã xác thực
-            String userEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
-            if (userEmail == null || userEmail.trim().isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            return ResponseEntity.ok(orderService.getOrdersByUserEmail(userEmail));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).build();
+        String userEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            throw new BusinessException("Thiếu email người dùng");
         }
+        return ResponseEntity.ok(orderService.getOrdersByUserEmail(userEmail));
     }
 
     @GetMapping("/my-order-items")
     public ResponseEntity<List<OrderItem>> getMyOrderItems(
             @RequestParam(required = false) String email,
             Principal principal) {
-        try {
-            // Ưu tiên lấy email từ JWT Principal đã xác thực
-            String userEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
-            if (userEmail == null || userEmail.trim().isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            return ResponseEntity.ok(orderService.getOrderItemsByUserEmail(userEmail));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).build();
+        String userEmail = (principal != null && principal.getName() != null) ? principal.getName() : email;
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            throw new BusinessException("Thiếu email người dùng");
         }
+        return ResponseEntity.ok(orderItemService.getOrderItemsByUserEmail(userEmail));
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<ResponseDTO<String>> updateStatus(
-            @PathVariable Long id, 
+    public ResponseEntity<ResponseDTO<Order>> updateStatus(
+            @PathVariable Long id,
             @RequestParam String status) {
-        try {
-            orderService.updateOrderStatus(id, status);
-            return ResponseEntity.ok(ResponseDTO.success("Cập nhật trạng thái thành công"));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(ResponseDTO.error(e.getMessage(), "400"));
-        }
+        Order updated = orderService.updateOrderStatus(id, status);
+        return ResponseEntity.ok(ResponseDTO.success(updated));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<ResponseDTO<Order>> cancelOrder(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        Order cancelled = orderService.cancelOrder(id, email, isAdmin(authentication));
+        return ResponseEntity.ok(ResponseDTO.success(cancelled));
     }
 
     @PutMapping("/item/{id}/status")
     public ResponseEntity<ResponseDTO<String>> updateItemStatus(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @RequestParam String status) {
-        try {
-            orderService.updateOrderItemStatus(id, status);
-            return ResponseEntity.ok(ResponseDTO.success("Cập nhật trạng thái sản phẩm thành công"));
-        } catch (Exception e) {
-            return ResponseEntity.status(400).body(ResponseDTO.error(e.getMessage(), "400"));
-        }
+        orderItemService.updateOrderItemStatus(id, status);
+        return ResponseEntity.ok(ResponseDTO.success("Cập nhật trạng thái sản phẩm thành công"));
     }
 
-    @GetMapping("/ReadOne/{id}")
-    public ResponseEntity<ResponseDTO<String>> getOrderById(@PathVariable Long id) {
-        try {
-            orderService.getOrderById(id);
-            return ResponseEntity.ok(ResponseDTO.success("Hiển thị thành công đơn hàng"));
-        } catch (Exception e) {
-            return ResponseEntity.status(404).body(ResponseDTO.error("Không tìm thấy đơn hàng", "404"));
-        }
+    @GetMapping({"/{id}", "/ReadOne/{id}"})
+    public ResponseEntity<ResponseDTO<Order>> getOrderById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        Order order = orderService.getOrderForRequester(id, email, isAdmin(authentication));
+        return ResponseEntity.ok(ResponseDTO.success(order));
     }
 
-    @GetMapping("/ReadAll")
+    @GetMapping({"", "/ReadAll"})
     public ResponseEntity<List<OrderItem>> getAllOrderItems() {
-        try {
-            return ResponseEntity.ok(orderService.getAllOrderItems());
-        } catch (Exception e) {
-            return ResponseEntity.status(403).build();
-        }
+        return ResponseEntity.ok(orderItemService.getAllOrderItems());
     }
 }

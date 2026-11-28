@@ -1,48 +1,44 @@
 package com.example.demo.controller;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import com.example.demo.Repository.CouponRepository;
 import com.example.demo.entity.Coupon;
+import com.example.demo.service.contract.CouponOperations;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/coupons")
+@RequiredArgsConstructor
 public class CouponController {
 
-    @Autowired
-    private CouponRepository couponRepository;
+    private final CouponOperations couponService;
 
     @GetMapping
     public ResponseEntity<List<Coupon>> getAllCoupons() {
-        return ResponseEntity.ok(couponRepository.findAll());
+        return ResponseEntity.ok(couponService.getAllCoupons());
     }
 
     @PostMapping
     public ResponseEntity<Coupon> createCoupon(@RequestBody Coupon coupon) {
-        coupon.setActive(true);
-        return ResponseEntity.ok(couponRepository.save(coupon));
+        return ResponseEntity.ok(couponService.createCoupon(coupon));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCoupon(@PathVariable Long id) {
-        couponRepository.deleteById(id);
+        couponService.deleteCoupon(id);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/validate/{code}")
     public ResponseEntity<Coupon> validateCoupon(@PathVariable String code) {
-        Optional<Coupon> couponOpt = couponRepository.findByCode(code);
-        if (couponOpt.isPresent()) {
-            Coupon coupon = couponOpt.get();
-            if (coupon.isActive() && coupon.getQuantity() > 0) {
-                return ResponseEntity.ok(coupon);
-            }
-        }
-        return ResponseEntity.status(400).build();
+        return ResponseEntity.ok(couponService.validateActiveCoupon(code));
     }
 }

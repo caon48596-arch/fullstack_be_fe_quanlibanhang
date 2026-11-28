@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getValidMediaUrl } from '@/util/fetchClient';
 import {
     authLayoutStyles,
     formStyles,
@@ -42,55 +43,38 @@ export default function RegisterPage() {
         try {
             const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://project1-production-6826.up.railway.app/api';
 
+            // Gửi yêu cầu OTP tập trung qua Backend Spring Boot (Redis TTL + Async SMTP)
+            let response: Response | null = null;
+            try {
+                response = await fetch(`${apiBase}/users/request-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
+                });
+            } catch {
+                if (apiBase.includes('localhost')) {
+                    response = await fetch('https://project1-production-6826.up.railway.app/api/users/request-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
+                    }).catch(() => null);
+                }
+            }
+
+            if (!response) {
+                throw new Error('Không thể kết nối đến máy chủ xác thực.');
+            }
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Email hoặc số điện thoại đã tồn tại trong hệ thống!');
+            }
+
             sessionStorage.setItem('pendingAuthData', JSON.stringify({
                 username: formData.username.trim(),
                 email:    formData.email.trim(),
                 password: formData.password,
             }));
-
-            let otpSent = false;
-            try {
-                const nextRes = await fetch('/api/auth/otp/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
-                });
-                const nextData = await nextRes.json().catch(() => ({}));
-                if (nextRes.ok && nextData.success) {
-                    otpSent = true;
-                    if (nextData.otpSessionToken) {
-                        sessionStorage.setItem('pendingOtpSession', nextData.otpSessionToken);
-                    }
-                }
-            } catch (nextErr) {
-                console.warn('[Register] Đang kết nối dự phòng sang Backend:', nextErr);
-            }
-
-            if (!otpSent) {
-                let response: Response | null = null;
-                try {
-                    response = await fetch(`${apiBase}/users/request-otp`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
-                    });
-                } catch {
-                    if (apiBase.includes('localhost')) {
-                        response = await fetch('https://project1-production-6826.up.railway.app/api/users/request-otp', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: formData.email.trim(), type: 'REGISTER' }),
-                        }).catch(() => null);
-                    }
-                }
-
-                if (response) {
-                    const data = await response.json().catch(() => ({}));
-                    if (!response.ok && response.status !== 404) {
-                        throw new Error(data.message || data.error || 'Email hoặc số điện thoại đã tồn tại trong hệ thống!');
-                    }
-                }
-            }
 
             router.push('/verify-otp?action=register');
         } catch (err) {
@@ -105,10 +89,10 @@ export default function RegisterPage() {
             <div className={authLayoutStyles.container}>
                 <div className={authLayoutStyles.logoWrapper}>
                     <img
-                        src="/HINH_TRANG_CHU/logo_dang nhap.png"
+                        src={getValidMediaUrl('/HINH_TRANG_CHU/logo_dang nhap.png')}
                         alt="IPWORLD Logo"
                         className={authLayoutStyles.logoImage}
-                        onError={(e) => { (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/logo2.jpg'; }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/logo2.jpg'); }}
                     />
                     <h2 className={authLayoutStyles.logoText} style={{ textShadow: '2px 3px 8px #173B70' }}>
                         IPWORLD

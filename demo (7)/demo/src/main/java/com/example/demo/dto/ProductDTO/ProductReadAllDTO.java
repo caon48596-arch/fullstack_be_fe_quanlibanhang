@@ -2,6 +2,8 @@ package com.example.demo.dto.ProductDTO;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class ProductReadAllDTO {
     private Integer page;
@@ -10,7 +12,7 @@ public class ProductReadAllDTO {
     private String imageUrl;
     private String videoUrl;
     private String name;
-    private Double price;
+    private BigDecimal price;
     private String description;
     private Long categoryId;
 }

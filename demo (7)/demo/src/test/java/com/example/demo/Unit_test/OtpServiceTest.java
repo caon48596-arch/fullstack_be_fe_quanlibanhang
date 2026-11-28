@@ -1,10 +1,18 @@
 package com.example.demo.Unit_test;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+import java.time.Duration;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.example.demo.service.OtpService;
 
@@ -18,7 +26,7 @@ class OtpServiceTest {
     }
 
     @Test
-    @DisplayName("Tạo mã OTP 6 chữ số thành công")
+    @DisplayName("Tạo mã OTP 6 chữ số thành công (Caffeine fallback)")
     void testGenerateOtp_Success() {
         String identifier = "user@example.com";
         String otp = otpService.generateOtp(identifier);
@@ -89,5 +97,53 @@ class OtpServiceTest {
         });
 
         assertTrue(exception.getMessage().contains("quá 5 lần"));
+    }
+
+    @Test
+    @DisplayName("Lưu và xác thực OTP trên Redis (TTL 5 phút + atomic HINCRBY khi sai)")
+    @SuppressWarnings("unchecked")
+    void testOtp_RedisPrimaryMode() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        HashOperations<String, Object, Object> hashOps = mock(HashOperations.class);
+        when(redisTemplate.opsForHash()).thenReturn(hashOps);
+
+        OtpService redisOtpService = new OtpService();
+        redisOtpService.setStringRedisTemplate(redisTemplate);
+        redisOtpService.setCacheType("redis");
+
+        String otp = redisOtpService.generateOtp("User@Example.com");
+        String expectedKey = "ipworld:otp:user@example.com";
+
+        verify(hashOps).putAll(eq(expectedKey), eq(Map.of("otp", otp, "attempts", "0")));
+        verify(redisTemplate).expire(eq(expectedKey), eq(Duration.ofSeconds(300)));
+
+        // Nhập sai 1 lần -> tăng attempts atomic bằng HINCRBY
+        when(hashOps.get(expectedKey, "otp")).thenReturn(otp);
+        when(hashOps.increment(expectedKey, "attempts", 1L)).thenReturn(1L);
+        RuntimeException wrongEx = assertThrows(RuntimeException.class,
+                () -> redisOtpService.verifyOtp("user@example.com", "000000"));
+        assertTrue(wrongEx.getMessage().contains("còn 4 lần thử"));
+
+        // Nhập đúng -> xóa key khỏi Redis
+        assertDoesNotThrow(() -> redisOtpService.verifyOtp("user@example.com", otp));
+        verify(redisTemplate).delete(expectedKey);
+    }
+
+    @Test
+    @DisplayName("Tự động fallback sang Caffeine nếu Redis mất kết nối")
+    @SuppressWarnings("unchecked")
+    void testOtp_RedisDown_GracefulFallbackToCaffeine() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        HashOperations<String, Object, Object> hashOps = mock(HashOperations.class);
+        when(redisTemplate.opsForHash()).thenReturn(hashOps);
+        doThrow(new QueryTimeoutException("Redis unreachable")).when(hashOps).putAll(anyString(), anyMap());
+        when(hashOps.get(anyString(), any())).thenThrow(new QueryTimeoutException("Redis unreachable"));
+
+        OtpService redisOtpService = new OtpService();
+        redisOtpService.setStringRedisTemplate(redisTemplate);
+        redisOtpService.setCacheType("redis");
+
+        String otp = redisOtpService.generateOtp("fallback@example.com");
+        assertDoesNotThrow(() -> redisOtpService.verifyOtp("fallback@example.com", otp));
     }
 }

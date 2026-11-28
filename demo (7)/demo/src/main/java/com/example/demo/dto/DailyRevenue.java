@@ -1,7 +1,9 @@
 package com.example.demo.dto;
 
+import java.math.BigDecimal;
+
 public interface DailyRevenue {
     String getDate();
-    Double getRevenue();
+    BigDecimal getRevenue();
     Long getOrderCount();
 }

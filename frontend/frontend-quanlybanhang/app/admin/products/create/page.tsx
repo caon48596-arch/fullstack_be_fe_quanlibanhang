@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchClient, getValidMediaUrl } from "../../../../util/fetchClient";
 import { productService } from "../../../../util/productService";
+import MediaUploadField from "../../../../components/MediaUploadField";
 import { ArrowLeft, TrendingUp, Image as ImageIcon, Video, Check, Sparkles } from "lucide-react";
 
 export default function CreateProduct() {
@@ -164,29 +165,41 @@ export default function CreateProduct() {
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-              <ImageIcon size={14} /> Đường dẫn ảnh (Image URL)
+              <ImageIcon size={14} /> Đường dẫn ảnh (Image URL — Cloudflare R2)
             </label>
             <input
               type="text"
               name="imageUrl"
               value={formData.imageUrl}
               onChange={handleChange}
-              placeholder="https://... hoặc /HINH_PC/PCGamingRTX4070.jpg"
+              placeholder="https://cdn... (hoặc bấm nút Tải ảnh lên CDN bên dưới)"
               className="w-full p-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <MediaUploadField
+              accept="image/*"
+              folder="products/images"
+              label="Tải ảnh lên Cloudflare R2"
+              onUploaded={(url) => setFormData(prev => ({ ...prev, imageUrl: url }))}
             />
           </div>
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-              <Video size={14} /> Đường dẫn video (Video URL)
+              <Video size={14} /> Đường dẫn video 4K (Video URL — Cloudflare R2)
             </label>
             <input
               type="text"
               name="videoUrl"
               value={formData.videoUrl}
               onChange={handleChange}
-              placeholder="https://... hoặc /HINH_TRANG_CHU/... (định dạng mp4)"
+              placeholder="https://cdn... (định dạng mp4/webm)"
               className="w-full p-2.5 text-xs sm:text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <MediaUploadField
+              accept="video/*"
+              folder="products/videos"
+              label="Tải video lên Cloudflare R2"
+              onUploaded={(url) => setFormData(prev => ({ ...prev, videoUrl: url }))}
             />
           </div>
 
@@ -205,7 +218,7 @@ export default function CreateProduct() {
                         alt="Preview"
                         className="w-full h-full object-contain"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/HINH_TRANG_CHU/ipwworlkd.png';
+                          (e.target as HTMLImageElement).src = getValidMediaUrl('/HINH_TRANG_CHU/ipwworlkd.png');
                         }}
                       />
                     </div>
@@ -216,7 +229,7 @@ export default function CreateProduct() {
                     <span className="text-[11px] font-bold text-gray-500 mb-2">Video xem trước</span>
                     <div className="w-full h-36 bg-black rounded overflow-hidden flex items-center justify-center">
                       <video
-                        src={formData.videoUrl}
+                        src={getValidMediaUrl(formData.videoUrl)}
                         controls
                         className="w-full h-full object-contain"
                       />

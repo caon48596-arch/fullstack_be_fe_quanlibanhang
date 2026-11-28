@@ -1,30 +1,28 @@
 package com.example.demo.controller;
 
-import lombok.extern.slf4j.Slf4j;
+import com.example.demo.service.contract.SystemHealthOperations;
+import com.example.demo.service.contract.SystemHealthOperations.SystemHealthReport;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/system")
-@Slf4j
+@RequiredArgsConstructor
 public class HealthCheckController {
+
+    private final SystemHealthOperations systemHealthService;
 
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> checkHealth() {
-        log.info("System health check API was called.");
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "UP");
-        response.put("timestamp", LocalDateTime.now());
-        response.put("service", "qlbanhang-api");
-        response.put("database", "Connected");
-
-        return ResponseEntity.ok(response);
+        SystemHealthReport report = systemHealthService.checkHealth();
+        return report.up()
+                ? ResponseEntity.ok(report.payload())
+                : ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(report.payload());
     }
 }

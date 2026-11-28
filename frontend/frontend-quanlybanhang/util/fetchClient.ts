@@ -1,4 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
+import { resolveMediaUrl } from './mediaUrl';
 
 export interface JwtCustomPayload {
     sub?: string;
@@ -38,34 +39,67 @@ export const clearStoredToken = () => {
     }
 };
 
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshAccessToken(baseUrl: string): Promise<string | null> {
+    if (typeof window === 'undefined') return null;
+    if (!refreshPromise) {
+        refreshPromise = (async () => {
+            try {
+                const res = await fetch(`${baseUrl}/users/refresh`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                if (!res.ok) return null;
+                const data = await res.json().catch(() => ({}));
+                const newToken = data?.data?.token || data?.token || null;
+                if (newToken) {
+                    setStoredToken(newToken);
+                }
+                return newToken;
+            } catch {
+                return null;
+            } finally {
+                refreshPromise = null;
+            }
+        })();
+    }
+    return refreshPromise;
+}
+
 export const fetchClient = async (endpoint: string, options: RequestInit = {}) => {
     const token = getStoredToken();
-    const headers = {
+    const buildHeaders = (bearerToken: string | null) => ({
         'Content-Type': 'application/json',
         ...options.headers,
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-    };
+        ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {})
+    });
 
+    let activeBaseUrl = PRIMARY_API_URL;
     let response: Response | null = null;
 
     try {
-        response = await fetch(`${PRIMARY_API_URL}${endpoint}`, {
+        response = await fetch(`${activeBaseUrl}${endpoint}`, {
             cache: 'no-store',
+            credentials: 'include',
             ...options,
-            headers
+            headers: buildHeaders(token),
         });
     } catch (primaryErr) {
         // Fallback sang Railway khi backend localhost chưa khởi động
         if (PRIMARY_API_URL.includes('localhost') && PRIMARY_API_URL !== FALLBACK_API_URL) {
             console.warn(`[fetchClient] Kết nối ${PRIMARY_API_URL} thất bại, tự động chuyển sang Railway...`);
+            activeBaseUrl = FALLBACK_API_URL;
             try {
-                response = await fetch(`${FALLBACK_API_URL}${endpoint}`, {
+                response = await fetch(`${activeBaseUrl}${endpoint}`, {
                     cache: 'no-store',
+                    credentials: 'include',
                     ...options,
-                    headers
+                    headers: buildHeaders(token),
                 });
             } catch {
-                throw new Error('Không thể kết nối đến máy chủ máy chủ bán hàng. Vui lòng kiểm tra mạng!');
+                throw new Error('Không thể kết nối đến máy chủ bán hàng. Vui lòng kiểm tra mạng!');
             }
         } else {
             throw primaryErr;
@@ -76,8 +110,21 @@ export const fetchClient = async (endpoint: string, options: RequestInit = {}) =
         throw new Error('Không nhận được phản hồi từ máy chủ.');
     }
 
+    // Tự động Refresh Access Token bằng HttpOnly Refresh Cookie khi Access Token hết hạn (401/403)
+    const isAuthEndpoint = endpoint.includes('/users/login') || endpoint.includes('/users/refresh') || endpoint.includes('/users/logout');
+    if (response.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
+        const refreshedToken = await tryRefreshAccessToken(activeBaseUrl);
+        if (refreshedToken) {
+            response = await fetch(`${activeBaseUrl}${endpoint}`, {
+                cache: 'no-store',
+                credentials: 'include',
+                ...options,
+                headers: buildHeaders(refreshedToken),
+            });
+        }
+    }
+
     if (!response.ok) {
-        // Chỉ xóa token khi 401 từ endpoint bảo mật người dùng để tránh logout nhầm
         if (response.status === 401 && typeof window !== 'undefined') {
             const isProtectedUserEndpoint = endpoint.includes('/users/profile') ||
                                             endpoint.includes('/orders/my-order-items') ||
@@ -112,27 +159,6 @@ export const getDecodedToken = (): JwtCustomPayload | null => {
     const token = getStoredToken();
     if (!token) return null;
 
-    // Hỗ trợ token phiên fallback dạng ipworld_verified_<base64_email>
-    if (token.startsWith('ipworld_verified_')) {
-        try {
-            const parts = token.split('_');
-            const email = parts[2] ? atob(parts[2]) : 'user@ipworld.vn';
-            return {
-                sub: email,
-                username: email.split('@')[0],
-                role: 'ROLE_CLIENT',
-                exp: Math.floor(Date.now() / 1000) + 86400,
-            };
-        } catch {
-            return {
-                sub: 'user@ipworld.vn',
-                username: 'Khách hàng',
-                role: 'ROLE_CLIENT',
-                exp: Math.floor(Date.now() / 1000) + 86400,
-            };
-        }
-    }
-
     try {
         const decoded = jwtDecode<JwtCustomPayload>(token);
 
@@ -144,28 +170,9 @@ export const getDecodedToken = (): JwtCustomPayload | null => {
 
         return decoded;
     } catch (error) {
-        console.warn("[JWT] Token không chuẩn format chuẩn nhưng vẫn được giữ để duy trì phiên:", error);
-        try {
-            const tokenParts = token.split('.');
-            if (tokenParts.length >= 2) {
-                const base64Url = tokenParts[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(
-                    atob(base64)
-                        .split('')
-                        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                        .join('')
-                );
-                return JSON.parse(jsonPayload);
-            }
-        } catch {}
-
-        // Giữ nguyên token thay vì xóa ngay để tránh mất phiên ngoài ý muốn
-        return {
-            sub: 'user@ipworld.vn',
-            username: 'Tài khoản',
-            role: 'ROLE_CLIENT',
-        };
+        console.warn("[JWT] Token không hợp lệ, đã dọn dẹp phiên đăng nhập:", error);
+        clearStoredToken();
+        return null;
     }
 };
 
@@ -187,20 +194,5 @@ export const getUserNameFromToken = (): string | null => {
 };
 
 export const getValidMediaUrl = (url: string | undefined): string => {
-    if (!url || url.trim() === '') return '';
-    const cleanUrl = url.trim();
-
-    if (cleanUrl.startsWith('data:')) return cleanUrl;
-    if (cleanUrl.startsWith('//')) return `https:${cleanUrl}`;
-
-    if (cleanUrl.startsWith('/')) {
-        const hostUrl = PRIMARY_API_URL.replace(/\/api\/?$/, '');
-        return `${hostUrl}${cleanUrl}`;
-    }
-
-    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-        return `https://${cleanUrl}`;
-    }
-
-    return cleanUrl;
+    return resolveMediaUrl(url);
 };

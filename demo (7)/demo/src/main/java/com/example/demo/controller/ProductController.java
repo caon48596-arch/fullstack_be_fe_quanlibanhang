@@ -1,8 +1,9 @@
 package com.example.demo.controller;
 
-import java.util.List;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.demo.entity.Product;
+import com.example.demo.service.contract.ProductOperations;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,99 +12,63 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.demo.Repository.CategoryRepository;
-import com.example.demo.Repository.OrderItemRepository;
-import com.example.demo.Repository.ProductRepository;
-import com.example.demo.entity.OrderItem;
-import com.example.demo.entity.Product;
-import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
+@RequiredArgsConstructor
 public class ProductController {
 
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private CategoryRepository categoryRepository;
-
-    @Autowired
-    private OrderItemRepository orderItemRepository;
+    private final ProductOperations productService;
 
     @GetMapping
     public ResponseEntity<List<Product>> getAllProducts() {
-        return ResponseEntity.ok(productRepository.findAll());
+        return ResponseEntity.ok(productService.getAllActiveProducts());
+    }
+
+    @GetMapping("/paged")
+    public ResponseEntity<Page<Product>> getPagedProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "newest") String sort) {
+        return ResponseEntity.ok(
+                productService.getFilteredProducts(page, size, categoryId, keyword, minPrice, maxPrice, sort));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        return productRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Product product = productService.getProductById(id);
+        return product != null ? ResponseEntity.ok(product) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/category/{categoryId}")
     public ResponseEntity<List<Product>> getProductsByCategory(@PathVariable Long categoryId) {
-        return ResponseEntity.ok(productRepository.findByCategoryId(categoryId));
+        return ResponseEntity.ok(productService.getProductsByCategory(categoryId));
     }
 
     @PostMapping
-    public ResponseEntity<?> createProduct(@RequestBody Product product) {
-        if (product.getStock() == null) {
-            product.setStock(0);
-        }
-        if (product.getCategory() != null && product.getCategory().getId() != null) {
-            categoryRepository.findById(product.getCategory().getId())
-                    .ifPresent(product::setCategory);
-        }
-        Product saved = productRepository.save(product);
-        return ResponseEntity.ok(saved);
+    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
+        return ResponseEntity.ok(productService.createProduct(product));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
-        return productRepository.findById(id).map(product -> {
-            product.setName(productDetails.getName());
-            product.setPrice(productDetails.getPrice());
-            product.setDescription(productDetails.getDescription());
-            if (productDetails.getStock() != null) {
-                product.setStock(productDetails.getStock());
-            }
-            if (productDetails.getCategory() != null && productDetails.getCategory().getId() != null) {
-                categoryRepository.findById(productDetails.getCategory().getId())
-                        .ifPresent(product::setCategory);
-            }
-            if (productDetails.getImageUrl() != null) {
-                product.setImageUrl(productDetails.getImageUrl());
-            }
-            if (productDetails.getVideoUrl() != null) {
-                product.setVideoUrl(productDetails.getVideoUrl());
-            }
-            return ResponseEntity.ok(productRepository.save(product));
-        }).orElse(ResponseEntity.notFound().build());
+        Product updated = productService.updateProduct(id, productDetails);
+        return updated != null ? ResponseEntity.ok(updated) : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    @Transactional
-    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
-        try {
-            // Gỡ liên kết sản phẩm khỏi đơn hàng cũ để không bị chặn bởi khóa ngoại
-            List<OrderItem> items = orderItemRepository.findAll();
-            for (OrderItem item : items) {
-                if (item.getProduct() != null && item.getProduct().getId().equals(id)) {
-                    item.setProduct(null);
-                    orderItemRepository.save(item);
-                }
-            }
-            productRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            return ResponseEntity.badRequest().body("Không thể xóa sản phẩm này vì đã có trong đơn hàng (liên kết dữ liệu).");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Lỗi hệ thống khi xóa sản phẩm: " + e.getMessage());
-        }
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        return productService.softDeleteProduct(id)
+                ? ResponseEntity.noContent().build()
+                : ResponseEntity.notFound().build();
     }
 }

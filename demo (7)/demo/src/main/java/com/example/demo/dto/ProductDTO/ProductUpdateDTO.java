@@ -2,6 +2,8 @@ package com.example.demo.dto.ProductDTO;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class ProductUpdateDTO {
     private Long id;
@@ -9,7 +11,7 @@ public class ProductUpdateDTO {
     private String imageUrl;
     private String videoUrl;
     private String name;
-    private Double price;
+    private BigDecimal price;
     private String description;
     private Long categoryId;
 }
